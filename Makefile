@@ -29,5 +29,10 @@ clean:
 clobber: clean
 	rm $(EXE) 
 
+## Copying source files to both the servers
+scp:
+	scp -i ~/Documents/COMP30023/labs/default.pem *.c *.h Makefile ec2-user@115.146.93.36:COMP30023
+	scp *.c *.h Makefile digitalis:COMP30023/project2
+
 ## Dependencies
-server.o:	  server.h
+server.o:	  server.h uint256.h

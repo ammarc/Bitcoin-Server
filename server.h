@@ -8,8 +8,11 @@
 #define SOLN "SOLN\r\n"
 #define WORK "WORK\r\n"
 
-typedef unsigned char BYTE;
+#include <stdbool.h>
+#include "uint256.h"
 
 void send_erro(BYTE error[40], int newsockfd);
+
+bool check_sol(uint32_t difficulty, BYTE seed[64], uint64_t solution);
 
 #endif

@@ -21,7 +21,7 @@ int main(int argc, char **argv)
 {
 	int sockfd, newsockfd, portno, clilen;
 	char buffer[256];
-	struct sockaddr_in serv_addr, cli_addr;
+	struct sockaddr_in serv_addr;//, cli_addr;
 	int n, i;
 	int client_sockets[10], max_sd, activity;
 	fd_set readfds;
@@ -179,6 +179,48 @@ int main(int argc, char **argv)
 					BYTE error[40] = {" Can't send PONG to server\r\n"};
 					send_erro(error, newsockfd);
 				}
+				else if (strncmp(buffer, SOLN, 4) == 0)
+				{
+					//TODO: need to check for formatting as well
+					uint32_t difficulty;
+					BYTE seed[32];
+					uint256_init(seed);
+					uint64_t solution;
+					char temp[64+1];
+
+					strtok(buffer, " ");
+
+ 					difficulty = strtol((strtok(NULL, " ")), NULL, 16);
+					strcpy(temp, strtok(NULL, " "));
+					temp[64] = '\0';
+					for(int i = 62; i >= 0; i-=2)
+					{
+						char str[2];
+						strcpy(str, &temp[i]);
+						seed[i/2] = strtol(str, NULL, 16) & 0xFF;
+						temp[i] = '\0';
+					}
+
+					//strcpy(temp, strtok(NULL, " "));
+ 					solution = strtol((strtok(NULL, " ")), NULL, 16);
+
+					if (check_sol(difficulty, seed, solution))
+					{
+						if(send(newsockfd, OKAY, strlen(OKAY), 0) != strlen(OKAY))
+						{
+							perror("ERROR writing to socket");
+							exit(1);
+						}
+					}
+					else
+					{
+						if(send(newsockfd, "WRONG", strlen("WRONG"), 0) != strlen("WRONG"))
+						{
+							perror("ERROR writing to socket");
+							exit(1);
+						}
+					}
+				}
             }  
         }
 		/* Listen on socket - means we're ready to accept connections - 
@@ -200,7 +242,7 @@ void send_erro (BYTE error[40], int newsockfd)
 	char error_message[40 + sizeof(ERRO) + 1] = "";
 	printf("%s", (char *)error);
 	memset(error_message, 0,  40 + sizeof(ERRO) + 1);
-	fprintf(stderr, "After memset\n");
+	//fprintf(stderr, "After memset\n");
 	char *concatenated = malloc(sizeof *error + sizeof(ERRO));
 	strcat(concatenated, ERRO);
 	strcat(concatenated, (char *)error);
@@ -209,11 +251,93 @@ void send_erro (BYTE error[40], int newsockfd)
 	//printf("%c", c);
 	//strcat(concatenated, )
 	//strcpy(error_message,;
-	fprintf(stderr, "Good till now\n");
+	//fprintf(stderr, "Good till now\n");
 	if (send(newsockfd, concatenated, strlen(concatenated), 0) != 
-												strlen(concatenated))
+												(int)strlen(concatenated))
 	{
 		perror("ERROR writing to socket");
 		exit(1);
 	}
+}
+
+bool check_sol(uint32_t difficulty, BYTE seed[64], uint64_t solution)
+{
+	// First we need to concatenate the seed and the solution
+	int i;
+	BYTE hash[64];
+	uint256_init(hash);
+	BYTE temp[64];
+	uint256_init(temp);
+	BYTE target[64];
+	uint256_init(target);
+	//BYTE alpha[64];
+	//uint256_init(alpha);
+	//BYTE beta[64];
+	//uint256_init(beta);
+	uint32_t alpha = 0;
+	uint32_t beta = 0;
+	// Finding the hash to be checked
+	fprintf(stderr, "Seed is: ");
+	print_uint256(seed);
+	fprintf(stderr, "\n");
+	fprintf(stderr, "Solution is: %lld\n", solution);
+
+	for (i = 63; i >= 0; i--)
+	{
+		hash[i] = seed[i] | (solution & 0xFF);
+		solution = solution >> 8;
+		fprintf(stderr, "Hash %d is %02x\n", i, hash[i]);
+	}
+	
+	// Extracting alpha
+	// We need bits 0..7 for alpha from difficulty (MSB)
+	fprintf(stderr, "difficulty is %d\n", difficulty);
+	beta = ((1 << 24) - 1) & difficulty;
+	fprintf(stderr, "Beta is %d\n", beta);
+	alpha = ((1 << 8) - 1) & (difficulty >> 24);
+	fprintf(stderr, "Alpha is %d\n", alpha);
+
+	uint32_t exponent;
+	//uint32_t store_difficulty = difficulty;
+	//difficulty = difficulty << 8;
+	//fprintf(stderr, "New difficulty : %u\n", difficulty);
+    // Extracting beta
+	//beta = ((1 << (24)) - 1) & difficulty;
+	//fprintf(stderr, "Beta is %d\n", beta);
+	
+	// Setting temp to 0
+	uint256_init(temp);
+	BYTE base[32];
+	uint256_init(base);
+	uint32_t beta_copy = beta;
+	base[31] = 2;
+	exponent = 8 * (alpha - 3);
+	uint256_exp(temp, base, exponent);
+	BYTE beta_rep[3];
+
+	for(int i = 31; i >= 0; i--)
+	{
+		beta_rep[i] = beta_copy & 0xFF;
+		beta_copy = beta_copy >> 8;
+	}
+    uint256_mul(target, beta_rep, temp);
+	fprintf(stderr, "Target is: ");
+	print_uint256(target);
+	fprintf(stderr, "\n");
+
+
+	fprintf(stderr, "Hash is: ");
+	print_uint256(hash);
+	fprintf(stderr, "\n");
+
+	sleep(10);
+
+	for(int i = 0; i < 64; i++)
+		if(hash[i] < target[i])
+			return true;
+        // Checking for the case when they're equal
+        /*if (i == 31)
+			if (target[i] == hash[i])
+				return false;*/
+    return false;
 }

@@ -53,7 +53,7 @@ static inline void uint256_add (BYTE *res, BYTE *a, BYTE *b) {
     for (size_t i = 0; i < 32; i++) {
         temp >>= 8;
         temp += aa[i] + bb[i];
-        res[i] = (BYTE) (temp & 0xff); 
+        res[i] = (BYTE) (temp & 0xff);
     }
 }
 
