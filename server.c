@@ -152,10 +152,9 @@ int main(int argc, char **argv)
                     close(newsockfd);
                     client_sockets[i] = 0;  
                 }
-				fprintf(stderr, "Finding ping match with buffer %s\n", buffer);
+
 				if (strncmp(buffer, PING, 4) == 0)
 				{
-					fprintf(stderr, "Found ping match\n");
 					if(send(newsockfd, PONG, strlen(PONG), 0) != strlen(PONG) )  
 					{
 						perror("ERROR writing to socket");
@@ -221,6 +220,41 @@ int main(int argc, char **argv)
 						}
 					}
 				}
+				else if (strncmp(buffer, WORK, 4) == 0)
+				{
+					//TODO: need to check for formatting as well
+					uint32_t difficulty;
+					BYTE seed[32];
+					uint256_init(seed);
+					uint64_t start;
+					uint8_t worker_count;
+					char temp[64+1];
+
+					strtok(buffer, " ");
+
+ 					difficulty = strtol((strtok(NULL, " ")), NULL, 16);
+					strcpy(temp, strtok(NULL, " "));
+					temp[64] = '\0';
+					for(int i = 62; i >= 0; i-=2)
+					{
+						char str[2];
+						strcpy(str, &temp[i]);
+						seed[i/2] = strtol(str, NULL, 16) & 0xFF;
+						temp[i] = '\0';
+					}
+
+					//strcpy(temp, strtok(NULL, " "));
+ 					start = strtol((strtok(NULL, " ")), NULL, 16);
+
+					worker_count = strtol((strtok(NULL, " ")), NULL, 16);
+
+					fprintf(stderr, "Difficulty is %d\n", difficulty);
+					fprintf(stderr, "Seed is ");
+					print_uint256(seed);
+					fprintf(stderr, "Start is %lld\n", start);
+					fprintf(stderr, "Worker count is %d\n", worker_count);
+					//work(difficulty, seed, start, worker_count);
+				}
             }  
         }
 		/* Listen on socket - means we're ready to accept connections - 
@@ -260,50 +294,60 @@ void send_erro (BYTE error[40], int newsockfd)
 	}
 }
 
-bool check_sol(uint32_t difficulty, BYTE seed[64], uint64_t solution)
+bool check_sol(uint32_t difficulty, BYTE seed[32], uint64_t solution)
 {
 	// First we need to concatenate the seed and the solution
 	int i;
-	BYTE hash[64];
-	uint256_init(hash);
+	BYTE x[32];
+	uint256_init(x);
 	BYTE temp[64];
 	uint256_init(temp);
 	BYTE target[64];
 	uint256_init(target);
-	//BYTE alpha[64];
-	//uint256_init(alpha);
-	//BYTE beta[64];
-	//uint256_init(beta);
+	BYTE hash[SHA256_BLOCK_SIZE];
+	uint256_init(hash);
+
+	SHA256_CTX ctx;
+
 	uint32_t alpha = 0;
 	uint32_t beta = 0;
-	// Finding the hash to be checked
+	// Finding the x to be checked
 	fprintf(stderr, "Seed is: ");
 	print_uint256(seed);
 	fprintf(stderr, "\n");
 	fprintf(stderr, "Solution is: %lld\n", solution);
 
-	for (i = 63; i >= 0; i--)
+	for (i = 31; i >= 0; i--)
 	{
-		hash[i] = seed[i] | (solution & 0xFF);
+		int temp = solution & 0xFF;
+		x[i] = seed[i] | temp;
+		fprintf(stderr, "seed %d %c sol is %llu set as %c\n", i, seed[i], solution&0xff, x[i]);
 		solution = solution >> 8;
-		fprintf(stderr, "Hash %d is %02x\n", i, hash[i]);
 	}
 	
+	fprintf(stderr, "x is: ");
+	print_uint256(x);
+	fprintf(stderr, "\n");
+
+	
+	// Applying the hash twice
+	sha256_init(&ctx);
+	sha256_update(&ctx, x, SHA256_BLOCK_SIZE);
+	sha256_final(&ctx, hash);
+	sha256_init(&ctx);
+	sha256_update(&ctx, hash, SHA256_BLOCK_SIZE);
+	sha256_final(&ctx, hash);
+
 	// Extracting alpha
 	// We need bits 0..7 for alpha from difficulty (MSB)
 	fprintf(stderr, "difficulty is %d\n", difficulty);
+    // Extracting beta
 	beta = ((1 << 24) - 1) & difficulty;
 	fprintf(stderr, "Beta is %d\n", beta);
 	alpha = ((1 << 8) - 1) & (difficulty >> 24);
 	fprintf(stderr, "Alpha is %d\n", alpha);
 
 	uint32_t exponent;
-	//uint32_t store_difficulty = difficulty;
-	//difficulty = difficulty << 8;
-	//fprintf(stderr, "New difficulty : %u\n", difficulty);
-    // Extracting beta
-	//beta = ((1 << (24)) - 1) & difficulty;
-	//fprintf(stderr, "Beta is %d\n", beta);
 	
 	// Setting temp to 0
 	uint256_init(temp);
@@ -330,14 +374,7 @@ bool check_sol(uint32_t difficulty, BYTE seed[64], uint64_t solution)
 	print_uint256(hash);
 	fprintf(stderr, "\n");
 
-	sleep(10);
-
-	for(int i = 0; i < 64; i++)
-		if(hash[i] < target[i])
-			return true;
-        // Checking for the case when they're equal
-        /*if (i == 31)
-			if (target[i] == hash[i])
-				return false;*/
-    return false;
+	if (sha256_compare(target, hash) > 0)
+		return true;
+	return false;
 }
