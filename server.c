@@ -254,7 +254,7 @@ int main(int argc, char **argv)
 					print_uint256(seed);
 					fprintf(stderr, "Start is %" PRId64 "\n", start);
 					fprintf(stderr, "Worker count is %d\n", worker_count);
-					//work(difficulty, seed, start, worker_count);
+					work(difficulty, seed, start, worker_count, newsockfd);
 				}
             }  
         }
@@ -395,17 +395,24 @@ void work(uint32_t difficulty, BYTE seed[32], uint64_t start,
 	uint256_init(curr_value);
 	uint64_t nonce = start;
 	char soln_msg[40];
+	char temp[40];
 
 	while (!check_sol(difficulty, seed, nonce))
 		nonce++;
     
 	// need to send the solution to the client
-	sprintf(soln_msg, "%s %x ", SOLN, difficulty);
+	sprintf(soln_msg, "%s %x ", "SOLN", difficulty);
 	
 	for (i = 0; i < 32; i++)
-		sprintf(soln_msg, "%x", seed[i]);
+	{
+		sprintf(temp, "%02x", seed[i]);
+		strcat(soln_msg, temp);
+	}
     
-	sprintf(soln_msg, " %" PRIx64 "\r\n", nonce);
+	sprintf(temp, " %" PRIx64 "\r\n", nonce);
+	strcat(soln_msg, temp);
+
+	printf("%s", soln_msg);
 	if (send(sockfd, soln_msg, strlen(soln_msg), 0) != 
 												(int)strlen(soln_msg))
 	{

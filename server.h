@@ -1,12 +1,12 @@
 #ifndef SERVER_H
 #define SERVER_H
 
-#define PONG "PONG\r\n"
-#define PING "PING\r\n"
-#define OKAY "OKAY\r\n"
-#define ERRO "ERRO\r\n"
-#define SOLN "SOLN\r\n"
-#define WORK "WORK\r\n"
+#define PONG "PONG"
+#define PING "PING"
+#define OKAY "OKAY"
+#define ERRO "ERRO"
+#define SOLN "SOLN"
+#define WORK "WORK"
 
 #include <stdbool.h>
 #include "uint256.h"
