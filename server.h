@@ -9,6 +9,8 @@
 #define WORK "WORK"
 #define ABRT "ABRT"
 
+#define MAX_CLIENTS 100
+
 #include <stdbool.h>
 #include "uint256.h"
 #include "sha256.h"

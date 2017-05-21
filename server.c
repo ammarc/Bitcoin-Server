@@ -1,8 +1,9 @@
-/* A simple server in the internet domain using TCP
-The port number is passed as an argument 
-
-
- To compile: gcc server.c -o server 
+/*
+ *  Project 2 for COMP30023: Computer Systems
+ *  at the University of Melbourne
+ *  Semester 1, 2017
+ *  by: Ammar Ahmed
+ *  Username: ammara
 */
 
 #include <stdio.h>
@@ -15,6 +16,7 @@ The port number is passed as an argument
 #include <netinet/in.h>
 #include <errno.h>
 #include <inttypes.h>
+#include <stdbool.h>
 #include "server.h"
 #include "mine.h"
 #include "input-handler.h"
@@ -24,12 +26,12 @@ int main(int argc, char **argv)
 {
 	int sockfd, newsockfd, portno, clilen;
 	char buffer[256];
-	struct sockaddr_in serv_addr;//, cli_addr;
+	struct sockaddr_in serv_addr;
 	int n, i;
-	int client_sockets[10], max_sd, activity;
+	int client_sockets[MAX_CLIENTS], max_sd, activity;
 	fd_set readfds;
 
-	for (i = 0; i < 10; i++)
+	for (i = 0; i < MAX_CLIENTS; i++)
 		client_sockets[i] = 0;
 
 	if (argc < 2) 
@@ -69,8 +71,8 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	//try to specify maximum of 3 pending connections for the master socket 
-    if (listen(sockfd, 10) < 0)  
+	//try to specify maximum of 100 pending connections for the master socket 
+    if (listen(sockfd, MAX_CLIENTS) < 0)
     {  
         perror("listen");  
         exit(EXIT_FAILURE);  
@@ -81,7 +83,7 @@ int main(int argc, char **argv)
 
 	//TODO: change this to accomodate for windows carriage return
 	//TODO: not sure about this loop to keep the server running
-	while (1)
+	while (true)
 	{
 		// Setting all the file descriptors to 0
 		FD_ZERO(&readfds);
@@ -90,7 +92,7 @@ int main(int argc, char **argv)
 		FD_SET(sockfd, &readfds);
 		max_sd = sockfd;
 
-		for (i = 0; i < 10; i++)
+		for (i = 0; i < MAX_CLIENTS; i++)
 		{
 			if (client_sockets[i] > 0)
 				FD_SET(client_sockets[i], &readfds);
@@ -125,7 +127,7 @@ int main(int argc, char **argv)
 				then process */
 		
             //add new socket to array of sockets 
-            for (i = 0; i < 10; i++)  
+            for (i = 0; i < MAX_CLIENTS; i++)  
             {  
                 //if position is empty 
                 if( client_sockets[i] == 0 )  
@@ -139,12 +141,13 @@ int main(int argc, char **argv)
 
 		//else its some IO operation on some other socket
 		//TODO: change this to handle clients
-        for (i = 0; i < 10; i++)  
+        for (i = 0; i < MAX_CLIENTS; i++)  
         {
-            newsockfd = client_sockets[i];  
+            newsockfd = client_sockets[i];
                 
             if (FD_ISSET(newsockfd , &readfds))  
             {  
+				fprintf(stderr, "newsockfd is %d\n", newsockfd);
 				bzero(buffer,256);
                 //Check if it was for closing , and also read the 
                 //incoming message 
@@ -152,34 +155,12 @@ int main(int argc, char **argv)
                 if ((n = read(newsockfd, buffer, 255)) == 0)  
                 {  
                     //Close the socket and mark as 0 in list for reuse 
-					fprintf(stderr, "Closing socket\n");
+					fprintf(stderr, "Closing socket %d\n", newsockfd);
                     close(newsockfd);
                     client_sockets[i] = 0;  
                 }
-
-				if (strncmp(buffer, PING, 4) == 0)
-					handle_ping(newsockfd);
-				
-				else if (strncmp(buffer, ERRO, 4) == 0)
-					handle_erro(newsockfd);
-
-				else if (strncmp(buffer, OKAY, 4) == 0)
-					handle_okay(newsockfd);
-
-				else if (strncmp(buffer, PONG, 4) == 0)
-					handle_pong(newsockfd);
-
-				else if (strncmp(buffer, SOLN, 4) == 0)
-					handle_soln(newsockfd, buffer);
-
-				else if (strncmp(buffer, WORK, 4) == 0)
-					handle_work(newsockfd, buffer);
-
-				else if (strncmp(buffer, ABRT, 4) == 0)
-					handle_abrt(newsockfd);
-
 				else
-					handle_other(newsockfd);
+					handle_input(newsockfd, buffer);
             }
         }
 	}

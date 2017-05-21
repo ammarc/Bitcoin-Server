@@ -1,3 +1,6 @@
+#ifndef UINT_256
+#define UINT_256
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -116,3 +119,4 @@ static inline void uint256_exp (BYTE *res, BYTE *base, uint32_t exp) {
     }
     uint256_mul (res, acc, temp);
 }
+#endif

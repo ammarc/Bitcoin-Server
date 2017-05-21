@@ -3,6 +3,8 @@
 
 #include "sha256.h"
 
+void handle_input(int sockfd, char* buffer);
+
 void handle_ping(int sockfd);
 
 void handle_pong(int sockfd);
