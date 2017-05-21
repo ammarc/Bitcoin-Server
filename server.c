@@ -14,6 +14,7 @@ The port number is passed as an argument
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <errno.h>
+#include <inttypes.h>
 #include "server.h"
 
 
@@ -251,7 +252,7 @@ int main(int argc, char **argv)
 					fprintf(stderr, "Difficulty is %d\n", difficulty);
 					fprintf(stderr, "Seed is ");
 					print_uint256(seed);
-					fprintf(stderr, "Start is %lld\n", start);
+					fprintf(stderr, "Start is %" PRId64 "\n", start);
 					fprintf(stderr, "Worker count is %d\n", worker_count);
 					//work(difficulty, seed, start, worker_count);
 				}
@@ -315,13 +316,11 @@ bool check_sol(uint32_t difficulty, BYTE seed[32], uint64_t solution)
 	fprintf(stderr, "Seed is: ");
 	print_uint256(seed);
 	fprintf(stderr, "\n");
-	fprintf(stderr, "Solution is: %lld\n", solution);
 
 	for (i = 31; i >= 0; i--)
 	{
 		int temp = solution & 0xFF;
 		x[i] = seed[i] | temp;
-		fprintf(stderr, "seed %d %c sol is %llu set as %c\n", i, seed[i], solution&0xff, x[i]);
 		solution = solution >> 8;
 	}
 	
@@ -333,10 +332,19 @@ bool check_sol(uint32_t difficulty, BYTE seed[32], uint64_t solution)
 	// Applying the hash twice
 	sha256_init(&ctx);
 	sha256_update(&ctx, x, SHA256_BLOCK_SIZE);
+	fprintf(stderr, "First data:\n");
+	print_uint256(ctx.data);
 	sha256_final(&ctx, hash);
+	fprintf(stderr, "First hash:\n");
+	print_uint256(hash);
 	sha256_init(&ctx);
 	sha256_update(&ctx, hash, SHA256_BLOCK_SIZE);
+	fprintf(stderr, "Second data:\n");
+	print_uint256(ctx.data);
+	uint256_init(hash);
 	sha256_final(&ctx, hash);
+	fprintf(stderr, "Second hash:\n");
+	print_uint256(hash);
 
 	// Extracting alpha
 	// We need bits 0..7 for alpha from difficulty (MSB)
@@ -370,11 +378,38 @@ bool check_sol(uint32_t difficulty, BYTE seed[32], uint64_t solution)
 	fprintf(stderr, "\n");
 
 
-	fprintf(stderr, "Hash is: ");
+	fprintf(stderr, "Final hash is: ");
 	print_uint256(hash);
 	fprintf(stderr, "\n");
 
 	if (sha256_compare(target, hash) > 0)
 		return true;
 	return false;
+}
+
+void work(uint32_t difficulty, BYTE seed[32], uint64_t start,
+                                       uint8_t worker_count, int sockfd)
+{
+	int i;
+	BYTE curr_value[32];
+	uint256_init(curr_value);
+	uint64_t nonce = start;
+	char soln_msg[40];
+
+	while (!check_sol(difficulty, seed, nonce))
+		nonce++;
+    
+	// need to send the solution to the client
+	sprintf(soln_msg, "%s %x ", SOLN, difficulty);
+	
+	for (i = 0; i < 32; i++)
+		sprintf(soln_msg, "%x", seed[i]);
+    
+	sprintf(soln_msg, " %" PRIx64 "\r\n", nonce);
+	if (send(sockfd, soln_msg, strlen(soln_msg), 0) != 
+												(int)strlen(soln_msg))
+	{
+		perror("ERROR writing to socket");
+		exit(1);
+	}
 }
