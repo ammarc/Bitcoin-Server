@@ -12,8 +12,8 @@ CFLAGS = -Wall -Wextra -std=gnu99
 ## SRC = Source files.
 ## EXE = Executable name.
 
-SRC = server.c sha256.c mine.c input-handler.c
-OBJ = server.o sha256.o mine.o input-handler.o
+SRC = server.c sha256.c mine.c input-handler.c list.c
+OBJ = server.o sha256.o mine.o input-handler.o list.o
 EXE = server
 
 ## Top level target is executable.
@@ -35,7 +35,8 @@ scp:
 	scp *.c *.h Makefile digitalis:COMP30023/project2
 
 ## Dependencies
-server.o:	  	 	server.h uint256.h sha256.h
+server.o:	  	 	server.h uint256.h sha256.h list.h
 sha256.o:	  	 	sha256.h
 mine.o:		  	 	mine.h uint256.h sha256.h
-input-handler.o: 	input-handler.h mine.h server.h sha256.h
+input-handler.o: 	input-handler.h mine.h server.h sha256.h list.h
+list.o:				list.h

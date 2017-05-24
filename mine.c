@@ -13,6 +13,7 @@ bool check_sol(struct soln_args args)
 {
 	//fprintf(stdout, "----------------Start Soln----------------\n");
 	int i;
+	uint32_t exponent;
     uint32_t difficulty = args.difficulty;
     BYTE seed[64];
 	for (i = 0; i < 32; i++)
@@ -38,8 +39,6 @@ bool check_sol(struct soln_args args)
 	fprintf(stdout, "\n");*/
 	for (i = 0; i < 32; i++)
 	{
-		//int temp = solution & 0xFF;
-		//x[i] = seed[i] | temp;
 		x[i] = seed[i];
 	}
 	for(i = 39; i >= 32; i--)
@@ -61,25 +60,16 @@ bool check_sol(struct soln_args args)
 	sha256_init(&ctx);
 	sha256_update(&ctx, x, 40);
 	sha256_final(&ctx, hash);
-	//fprintf(stderr, "First hash:\n");
-	//print_uint256(hash);
 	sha256_init(&ctx);
 	sha256_update(&ctx, hash, SHA256_BLOCK_SIZE);
 	uint256_init(hash);
 	sha256_final(&ctx, hash);
-	//fprintf(stderr, "Second hash:\n");
-	//print_uint256(hash);
 
-	// Extracting alpha
-	// We need bits 0..7 for alpha from difficulty (MSB)
-	//fprintf(stderr, "difficulty is %d\n", difficulty);
     // Extracting beta
 	beta = ((1 << 24) - 1) & difficulty;
-	//fprintf(stderr, "Beta is %d\n", beta);
+	// Extracting alpha
 	alpha = ((1 << 8) - 1) & (difficulty >> 24);
-	//fprintf(stderr, "Alpha is %d\n", alpha);
 
-	uint32_t exponent;
 	
 	// Setting temp to 0
 	uint256_init(temp);

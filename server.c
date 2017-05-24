@@ -19,18 +19,21 @@
 #include <stdbool.h>
 #include "server.h"
 #include "mine.h"
+#include "list.h"
 #include "input-handler.h"
 
 
 int main(int argc, char **argv)
 {
-	int sockfd, newsockfd, portno, clilen;
-	char buffer[256];
-	char temp[256];
+	int sockfd, newsockfd, portno, servlen;
 	struct sockaddr_in serv_addr;
-	int n, i, j;
+	int n, i, j, k = 0;
 	int client_sockets[MAX_CLIENTS], max_sd, activity;
 	fd_set readfds;
+	List* work_queue = malloc(sizeof(List));
+	// a buffer for each of the clients
+	char** buffers = malloc(sizeof(char*)*100);
+	char temp[256];
 
 	for (i = 0; i < MAX_CLIENTS; i++)
 		client_sockets[i] = 0;
@@ -79,12 +82,9 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);  
     }  
 	
-	//clilen = sizeof(cli_addr);
-	clilen = sizeof(serv_addr);
+	servlen = sizeof(serv_addr);
 
 	//TODO: change this to accomodate for windows carriage return
-	//TODO: not sure about this loop to keep the server running
-	//fprintf(stdout, "Starting infinite loop\n");
 	while (true)
 	{
 		// Setting all the file descriptors to 0
@@ -104,9 +104,7 @@ int main(int argc, char **argv)
 		}
 
 		// This waits for any activity in any of the sockets
-		//fprintf(stderr, "Waiting for an activity\n");
 		activity = select(max_sd + 1, &readfds, NULL, NULL, NULL);
-		//fprintf(stderr, "Finished waiting for an activity\n");
 
 		if ((activity < 0) && (errno!=EINTR))  
             		printf("select error");
@@ -118,13 +116,12 @@ int main(int argc, char **argv)
 			/* Accept a connection - block until a connection is ready to
 			be accepted. Get back a new file descriptor to communicate on. */
             if ((newsockfd = accept(sockfd, 
-                    (struct sockaddr *)&serv_addr, (socklen_t*)&clilen)) < 0)  
+                    (struct sockaddr *)&serv_addr, (socklen_t*)&servlen)) < 0)  
             {  
                 perror("accept");  
                 exit(EXIT_FAILURE);  
             }  
             
-			bzero(buffer,256);
 			/* Read characters from the connection,
 				then process */
 		
@@ -135,6 +132,8 @@ int main(int argc, char **argv)
                 if( client_sockets[i] == 0 )  
                 {  
                     client_sockets[i] = newsockfd ;  
+					buffers[i] = malloc(sizeof(char)*256);
+					memset(buffers[i], '\0', 256);
                     //printf("Adding to list of sockets as %d\n" , i);  
                     break;  
                 }  
@@ -146,40 +145,39 @@ int main(int argc, char **argv)
         for (i = 0; i < MAX_CLIENTS; i++)  
         {
             newsockfd = client_sockets[i];
-                
             if (FD_ISSET(newsockfd , &readfds))  
             {  
 				//fprintf(stderr, "newsockfd is %d\n", newsockfd);
-				bzero(buffer,256);
-				memset(temp, '\0', 256);
                 //Check if it was for closing , and also read the 
                 //incoming message 
 				//TODO: remove magic number for the size of val read
-                if ((n = read(newsockfd, buffer, 256)) == 0)  
+				n = read(newsockfd, temp, 256);
+				if (n+strlen(buffers[i]) > 256)
+					send_erro((BYTE*)"Message length too long", newsockfd);
+				strcat(buffers[i], temp);
+                if (n == 0)
                 {  
                     //Close the socket and mark as 0 in list for reuse 
-					//fprintf(stdout, "Closing socket %d\n", newsockfd);
+					free(buffers[i]);
                     close(newsockfd);
                     client_sockets[i] = 0;  
                 }
 				else
 				{
-					/*for (i = 0, j = 0; i < 256; i++, j++)
+					for (j = 0; j < 256; j++, k++)
 					{
-						if (i != 255 && buffer[i] == '\r' && buffer[i+1] == '\n')
+						if (buffers[i][j] == 0)
+							break;
+
+						if (j != 255 && buffers[i][j] == '\r' && buffers[i][j+1] == '\n')
 						{
-							//fprintf(stdout, "Temp is %s\n", temp);
-							//fprintf(stdout, "Buffer is %s\n", buffer);
-							handle_input(newsockfd, temp);
-							j = 0;
-							i++;
-							memset(temp, '\0', 256);
+							handle_input(newsockfd, buffers[i], work_queue);
+							k = 0;
+							j += 2;
+							memset(buffers[i], 0, 256);
 							continue;
 						}
-						temp[j] = buffer[i];
-					}*/
-					//fprintf(stdout, "Buffer is %s\n", buffer);
-					handle_input(newsockfd, buffer);
+					}
 				}
             }
         }

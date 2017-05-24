@@ -2,9 +2,10 @@
 #define HANDLER_H
 
 #include "sha256.h"
+#include "list.h"
 #define MSG_HEADER 4
 
-void handle_input(int sockfd, char* buffer);
+void handle_input(int sockfd, char* buffer, List* list);
 
 void handle_ping(int sockfd);
 

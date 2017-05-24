@@ -11,32 +11,45 @@
 int thread_count = 0;
 pthread_t tid[25];
 
-void handle_input(int sockfd, char* buffer)
+// Making a global list for all the submitted work
+List* work_queue;
+
+void handle_input(int sockfd, char* buffer, List* list)
 {
+    // Pointing to the same list global list
+    work_queue = list;
+
     if (strncmp(buffer, PING, 4) == 0)
+    {
         handle_ping(sockfd);
-    
+    }
     else if (strncmp(buffer, ERRO, 4) == 0)
+    {
         handle_erro(sockfd);
-
+    }
     else if (strncmp(buffer, OKAY, 4) == 0)
+    {
         handle_okay(sockfd);
-
+    }
     else if (strncmp(buffer, PONG, 4) == 0)
+    {
         handle_pong(sockfd);
-
+    }
     else if (strncmp(buffer, SOLN, 4) == 0)
+    {
         handle_soln(sockfd, buffer);
-
+    }
     else if (strncmp(buffer, WORK, 4) == 0)
+    {
         handle_work(sockfd, buffer);
-
+    }
     else if (strncmp(buffer, ABRT, 4) == 0)
+    {
         handle_abrt(sockfd);
-
+    }
     else
     {
-        //fprintf(stdout, "Handling other %s\n", buffer);
+        fprintf(stdout, "Handling other %s\n", buffer);
         handle_other(sockfd);
     }
 }
@@ -61,9 +74,25 @@ void handle_soln(int sockfd, char* buffer)
 
     strtok(buffer, " ");
 
-    in_args.difficulty = strtol((strtok(NULL, " ")), NULL, 16);
     strcpy(temp, strtok(NULL, " "));
-    temp[64] = '\0';
+    in_args.difficulty = strtol(temp, NULL, 16);
+    if (strlen(temp) != 16)
+    {
+        char *som = malloc(2000);
+        sprintf(som, "Temp is %s\n", temp); 
+        send_erro((BYTE *)som, sockfd);
+        fprintf(stdout, "Difficulty\n");
+        return;
+    }
+    memset(temp, 0, 65);
+    strcpy(temp, strtok(NULL, " "));
+    temp[strlen(temp)] = '\0';
+    if (strlen(temp) != 64)
+    {
+        send_erro("Invalid seed", sockfd);
+        fprintf(stdout, "Seed\n");
+        return;
+    }
     for(int i = 62; i >= 0; i-=2)
     {
         char str[3];
@@ -74,7 +103,16 @@ void handle_soln(int sockfd, char* buffer)
         temp[i] = '\0';
     }
 
-    in_args.solution = strtol((strtok(NULL, " ")), NULL, 16);
+    memset(temp, 0, 65);
+    
+    strcpy(temp, strtok(NULL, " "));
+    in_args.solution = strtol(temp, NULL, 16);
+    if (strlen(temp) != 8)
+    {
+        send_erro("Invalid solution", sockfd);
+        fprintf(stdout, "Solution\n");
+        return;
+    }
 
     //TODO: change this to allow for more threads
     //pthread_t tid[2];
@@ -84,7 +122,7 @@ void handle_soln(int sockfd, char* buffer)
     {
         if(send(sockfd, OKAY, strlen(OKAY), 0) != strlen(OKAY))
         {
-	    fprintf(stdout, "Error in soln okay\n");
+	        fprintf(stdout, "Error in soln okay\n");
             perror("ERROR writing to socket");
             exit(1);
         }
@@ -110,12 +148,16 @@ void handle_work(int sockfd, char* buffer)
     //TODO: need to check for formatting as well
     struct work_args in_args;
     char temp[64+1];
+    memset(temp, 0, 64);
 
     in_args.sockfd = sockfd;
 
     strtok(buffer, " ");
 
-    in_args.difficulty = strtol((strtok(NULL, " ")), NULL, 16);
+    strcpy(temp, strtok(NULL, " "));
+    in_args.difficulty = strtol(temp, NULL, 16);
+
+    
     strcpy(temp, strtok(NULL, " "));
     temp[64] = '\0';
     for(int i = 62; i >= 0; i-=2)
@@ -130,6 +172,8 @@ void handle_work(int sockfd, char* buffer)
 
     in_args.worker_count = strtol((strtok(NULL, " ")), NULL, 16);
 
+    list_add_end(work_queue, buffer);
+
     /*fprintf(stderr, "Difficulty is %d\n", in_args.difficulty);
     fprintf(stderr, "Seed is ");
     print_uint256(in_args.seed);
@@ -141,6 +185,9 @@ void handle_work(int sockfd, char* buffer)
     pthread_create(&tid[thread_count], NULL, (void *)work, &in_args);
     thread_count++;
     //work(in_args);
+
+    // The work has been done, so it can be removed from the list
+    list_remove_start(work_queue);
 }
 
 void handle_abrt(int sockfd){}
@@ -148,8 +195,8 @@ void handle_abrt(int sockfd){}
 void handle_okay(int sockfd)
 {
     BYTE error[40];
-    memset(error, 0, 40);
-    strcpy((char *)error, " Can't send OKAY to server");
+    memset(error, '\0', 40);
+    strcpy((char *)error, "Can't send OKAY to server");
     send_erro(error, sockfd);
 }
 
@@ -157,7 +204,7 @@ void handle_other(int sockfd)
 {
     BYTE error[40];
     memset(error, 0, 40);
-    strcpy((char *)error, "Invalid command\r\n");
+    strcpy((char *)error, "Invalid command");
     send_erro(error, sockfd);
 }
 
@@ -165,16 +212,19 @@ void send_erro (BYTE error[40], int sockfd)
 {
 	// TODO: remove this magic number
     BYTE concatenated[40+MSG_HEADER];
-    memset(concatenated, 0, 40+MSG_HEADER);
+    memset(concatenated, '\0', 40+MSG_HEADER);
 	strcat((char*)concatenated, ERRO);
 	strcat((char*)concatenated, ": ");
-	strcat((char*)concatenated, (char *)error);
+	strcat((char*)concatenated, (char*)error);
 	strcat((char*)concatenated, "\r\n");
     concatenated[strlen((char*)concatenated)] = '\0';
+    //concatenated[38] = '\r';
+    //concatenated[39] = '\n';
+    fprintf(stdout, "Sending error %s\n", concatenated);
 	if (send(sockfd, concatenated, strlen((char*)concatenated), 0) !=
 										(int)strlen((char*)concatenated))
 	{
-        	fprintf(stdout, "In send erro %s\n", concatenated);
+        fprintf(stdout, "In send erro %s\n", concatenated);
 		perror("ERROR writing to socket");
 		// TODO: remove this:
 		//exit(1);
@@ -190,9 +240,8 @@ void send_msg (BYTE msg[40], int sockfd)
 	if (send(sockfd, new_msg, strlen((char*)new_msg), 0) !=
 												(int)strlen((char*)new_msg))
 	{
-        	fprintf(stdout, "In send msg with %s\n", new_msg);
+        fprintf(stdout, "In send msg with %s\n", new_msg);
 		perror("ERROR writing to socket");
 		exit(1);
 	}
-
 }
