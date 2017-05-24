@@ -76,7 +76,7 @@ void handle_soln(int sockfd, char* buffer)
 
     strcpy(temp, strtok(NULL, " "));
     in_args.difficulty = strtol(temp, NULL, 16);
-    if (strlen(temp) != 16)
+    if (strlen(temp) != 8)
     {
         char *som = malloc(2000);
         sprintf(som, "Temp is %s\n", temp); 
@@ -107,7 +107,7 @@ void handle_soln(int sockfd, char* buffer)
     
     strcpy(temp, strtok(NULL, " "));
     in_args.solution = strtol(temp, NULL, 16);
-    if (strlen(temp) != 8)
+    if (strlen(temp) != 16)
     {
         send_erro("Invalid solution", sockfd);
         fprintf(stdout, "Solution\n");
@@ -220,7 +220,7 @@ void send_erro (BYTE error[40], int sockfd)
     concatenated[strlen((char*)concatenated)] = '\0';
     //concatenated[38] = '\r';
     //concatenated[39] = '\n';
-    fprintf(stdout, "Sending error %s\n", concatenated);
+    //fprintf(stdout, "Sending error %s\n", concatenated);
 	if (send(sockfd, concatenated, strlen((char*)concatenated), 0) !=
 										(int)strlen((char*)concatenated))
 	{
