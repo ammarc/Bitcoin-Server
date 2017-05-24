@@ -2,6 +2,7 @@
 #define HANDLER_H
 
 #include "sha256.h"
+#define MSG_HEADER 4
 
 void handle_input(int sockfd, char* buffer);
 
@@ -22,5 +23,7 @@ void handle_okay(int sockfd);
 void handle_other(int sockfd);
 
 void send_erro (BYTE error[40], int newsockfd);
+
+void send_msg (BYTE msg[40], int sockfd);
 
 #endif

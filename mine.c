@@ -11,6 +11,7 @@
 
 bool check_sol(struct soln_args args)
 {
+	//fprintf(stdout, "----------------Start Soln----------------\n");
 	int i;
     uint32_t difficulty = args.difficulty;
     BYTE seed[64];
@@ -32,29 +33,29 @@ bool check_sol(struct soln_args args)
 	uint32_t alpha = 0;
 	uint32_t beta = 0;
 	// Finding the x to be checked
-	fprintf(stderr, "Seed is: ");
+	/*fprintf(stdout, "Seed is: ");
 	print_uint256(seed);
-	fprintf(stderr, "\n");
+	fprintf(stdout, "\n");*/
 	for (i = 0; i < 32; i++)
 	{
 		//int temp = solution & 0xFF;
 		//x[i] = seed[i] | temp;
 		x[i] = seed[i];
 	}
-	for(i = 39; i >= 32; i--) {
+	for(i = 39; i >= 32; i--)
+	{
 		int temp = solution & 0xFF;
 		x[i] = temp;
 		solution = solution >> 8;
 	}
 	
-	fprintf(stderr, "x is: ");
+	/*fprintf(stdout, "x is: ");
 	printf ("0x");
     for (size_t i = 0; i < 40; i++) {
         printf ("%02x", x[i]); 
     }
     printf ("\n");
-
-	fprintf(stderr, "\n");
+	fprintf(stdout, "\n");*/
 	
 	// Applying the hash twice
 	sha256_init(&ctx);
@@ -101,6 +102,7 @@ bool check_sol(struct soln_args args)
 	//fprintf(stderr, "\n");
 
 
+	//fprintf(stdout, "----------------End Soln----------------\n");
 	if (sha256_compare(target, hash) > 0)
 		return true;
 	return false;
@@ -108,6 +110,7 @@ bool check_sol(struct soln_args args)
 
 void work(struct work_args args)
 {
+	//fprintf(stdout, "----------------Start Work----------------\n");
 	int i;
 	BYTE curr_value[32];
 	uint256_init(curr_value);
@@ -122,7 +125,6 @@ void work(struct work_args args)
     uint64_t start = args.start;
     uint8_t worker_count = args.worker_count;
     int sockfd = args.sockfd;
-	fprintf(stderr, "Socket is %d\n", sockfd);
 	uint64_t nonce = start;
 
 
@@ -157,6 +159,8 @@ void work(struct work_args args)
 													(int)strlen(soln_msg))
 	{
 		perror("ERROR writing to socket");
+		fprintf(stdout, "Error in work\n");
 		exit(1);
 	}
+	//fprintf(stdout, "----------------End Work----------------\n");
 }
