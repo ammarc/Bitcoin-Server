@@ -150,6 +150,7 @@ void work(struct work_args args)
 	{
 		perror("ERROR writing to socket");
 		fprintf(stdout, "Error in work\n");
+		fflush(stdout);
 		exit(1);
 	}
 	//fprintf(stdout, "----------------End Work----------------\n");

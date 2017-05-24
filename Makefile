@@ -6,7 +6,7 @@
 #
 
 CC = gcc
-CFLAGS = -Wall -Wextra -std=gnu99
+CFLAGS = -Wall -Wextra -std=gnu99 -O3
 
 ## OBJ = Object files.
 ## SRC = Source files.

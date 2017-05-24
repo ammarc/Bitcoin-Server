@@ -123,6 +123,7 @@ void handle_soln(int sockfd, char* buffer)
         if(send(sockfd, OKAY, strlen(OKAY), 0) != strlen(OKAY))
         {
 	        fprintf(stdout, "Error in soln okay\n");
+            fflush(stdout);
             perror("ERROR writing to socket");
             exit(1);
         }
@@ -156,7 +157,13 @@ void handle_work(int sockfd, char* buffer)
 
     strcpy(temp, strtok(NULL, " "));
     in_args.difficulty = strtol(temp, NULL, 16);
-
+    if (strlen(temp) != 8)
+    {
+        send_erro("Invalid difficulty", sockfd);
+        fprintf(stdout, "Solution\n");
+        fflush(stdout);
+        return;
+    }
     
     strcpy(temp, strtok(NULL, " "));
     temp[64] = '\0';
@@ -220,14 +227,18 @@ void send_erro (BYTE error[40], int sockfd)
     concatenated[strlen((char*)concatenated)] = '\0';
     //concatenated[38] = '\r';
     //concatenated[39] = '\n';
-    //fprintf(stdout, "Sending error %s\n", concatenated);
-	if (send(sockfd, concatenated, strlen((char*)concatenated), 0) !=
+    int n = 0;
+	if ((n = send(sockfd, concatenated, strlen((char*)concatenated), 0)) !=
 										(int)strlen((char*)concatenated))
 	{
-        fprintf(stdout, "In send erro %s\n", concatenated);
+
+        fprintf(stdout, "In send erro and found an error %d and %ld\n", n, strlen((char*)concatenated));
+        fflush(stdout);
+        fprintf(stdout, "In send erro and found an error\n");
+        fflush(stdout);
 		perror("ERROR writing to socket");
-		// TODO: remove this:
-		//exit(1);
+		// TODO: remove this
+		exit(1);
 	}
 }
 
@@ -241,6 +252,7 @@ void send_msg (BYTE msg[40], int sockfd)
 												(int)strlen((char*)new_msg))
 	{
         fprintf(stdout, "In send msg with %s\n", new_msg);
+        fflush(stdout);
 		perror("ERROR writing to socket");
 		exit(1);
 	}
