@@ -16,6 +16,6 @@
 #include "uint256.h"
 #include "sha256.h"
 
-void log(char* msg, char* ip, int sockfd);
+void log_to_file(char* msg, char* ip, int sockfd);
 
 #endif

@@ -32,7 +32,11 @@ clobber: clean
 ## Copying source files to both the servers
 scp:
 	scp -i ~/Documents/COMP30023/labs/default.pem *.c *.h Makefile ec2-user@115.146.93.36:COMP30023
-	scp *.c *.h Makefile digitalis:COMP30023/project2
+	scp *.c *.h Makefile digitalis2:COMP30023/project2
+
+## Submitting the project
+submit:
+	submit comp30023 project2 *.c *.h Makefile
 
 ## Dependencies
 server.o:	  	 	server.h uint256.h sha256.h list.h

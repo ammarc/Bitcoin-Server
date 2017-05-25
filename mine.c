@@ -80,7 +80,7 @@ bool check_sol(struct soln_args args)
 	base[31] = 2;
 	exponent = 8 * (alpha - 3);
 	uint256_exp(temp, base, exponent);
-	BYTE beta_rep[3];
+	BYTE beta_rep[32];
 
 	for(int i = 31; i >= 0; i--)
 	{
@@ -147,5 +147,6 @@ void work(struct work_args args)
 	strcat(soln_msg, temp);
 
 	send_msg((BYTE*)soln_msg, sockfd);
+	thread_count--;
 	//fprintf(stdout, "----------------End Work----------------\n");
 }

@@ -18,6 +18,7 @@
 #include <errno.h>
 #include <inttypes.h>
 #include <stdbool.h>
+#include <signal.h>
 #include "server.h"
 #include "mine.h"
 #include "list.h"
@@ -160,7 +161,7 @@ int main(int argc, char **argv)
                 //incoming message 
 				//TODO: remove magic number for the size of val read
 				n = read(newsockfd, temp, 256);
-				log(temp, inet_ntoa(address.sin_addr), newsockfd);
+				log_to_file(temp, inet_ntoa(address.sin_addr), newsockfd);
 				if (n+strlen(buffers[i]) > 256)
 				{
 					send_erro((BYTE*)"Message length too long", newsockfd);
@@ -176,9 +177,33 @@ int main(int argc, char **argv)
                 }
 				else
 				{
+					/*int j = 0;
+					while(buffers[i][j] != '\0')
+					{
+						char *first_msg = malloc(sizeof(char) * (256 + 1)); 
+						char *rem_msg= malloc(sizeof(char) * (256 + 1));
+						memset(rem_msg, '\0', 256 + 1); 
+						if(j != 256 - 1 && buffers[i][j] == '\r' && 
+								buffers[i][j + 1] == '\n')
+						{
+							strncpy(first_msg , buffers[i], j);
+							first_msg [j] = '\0';
+							// Adding 3 for null byte and carriage return
+							strcpy(rem_msg, buffers[i] + j + 3);
+							handle_input(newsockfd, first_msg , work_queue);
+							memset(buffers[i], '\0', 256 + 1);
+							strcpy(buffers[i], rem_msg); 
+							free(rem_msg);
+							free(first_msg);
+							j += 2;    
+						}
+						else
+							j++;
+					}*/
+					
 					for (j = 0; j < 256; j++, k++)
 					{
-						if (buffers[i][j] == 0)
+						if (buffers[i][j] == '\0')
 							break;
 
 						if (j != 255 && buffers[i][j] == '\r' && buffers[i][j+1] == '\n')
@@ -190,6 +215,7 @@ int main(int argc, char **argv)
 							continue;
 						}
 					}
+					
 				}
             }
         }
@@ -199,7 +225,7 @@ int main(int argc, char **argv)
 	return 0; 
 }
 
-void log(char* msg, char* ip, int sockfd)
+void log_to_file(char* msg, char* ip, int sockfd)
 {
 	struct tm* loc_time;
 	time_t curr_time;

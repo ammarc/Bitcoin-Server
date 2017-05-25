@@ -50,7 +50,7 @@ void handle_input(int sockfd, char* buffer, List* list)
     }
     else
     {
-        fprintf(stdout, "Handling other %s\n", buffer);
+        //fprintf(stdout, "Handling other %s\n", buffer);
         handle_other(sockfd);
     }
 }
@@ -69,12 +69,15 @@ void handle_pong(int sockfd)
 void handle_soln(int sockfd, char* buffer)
 {
     //TODO: need to check for formatting as well
+    //fprintf(stdout, "Starting soln with buffer %s\n", buffer);
+    //fflush(stdout);
     struct soln_args in_args;
     char temp[64+1];
     memset(temp, 0, 65);
 
     strtok(buffer, " ");
 
+    // Extracting difficulty
     strcpy(temp, strtok(NULL, " "));
     in_args.difficulty = strtol(temp, NULL, 16);
     if (strlen(temp) != 8)
@@ -85,6 +88,8 @@ void handle_soln(int sockfd, char* buffer)
         fprintf(stdout, "Difficulty\n");
         return;
     }
+
+    // Extracting Seed
     memset(temp, 0, 65);
     strcpy(temp, strtok(NULL, " "));
     temp[strlen(temp)] = '\0';
@@ -96,6 +101,7 @@ void handle_soln(int sockfd, char* buffer)
     }
     for(int i = 62; i >= 0; i-=2)
     {
+        // Putting two hexes into one byte
         char str[3];
         memset(str, 0, 3);
         strncpy(str, temp+i, 2);
@@ -104,14 +110,16 @@ void handle_soln(int sockfd, char* buffer)
         temp[i] = '\0';
     }
 
-    memset(temp, 0, 65);
+    // Extracting solution
+    memset(temp, '\0', 65);
     
-    strcpy(temp, strtok(NULL, " "));
+    strcpy(temp, strtok(NULL, "\r\n"));
     in_args.solution = strtol(temp, NULL, 16);
     if (strlen(temp) != 16)
     {
         send_erro((BYTE*)"Invalid solution", sockfd);
-        fprintf(stdout, "Solution\n");
+        fprintf(stdout, "Temp was %s\n", temp);
+        fflush(stdout);
         return;
     }
 
@@ -142,6 +150,8 @@ void handle_erro(int sockfd)
 void handle_work(int sockfd, char* buffer)
 {
     //TODO: need to check for formatting as well
+    fprintf(stdout, "Starting work with buffer %s\n", buffer);
+    fflush(stdout);
     struct work_args in_args;
     char temp[64+1];
     memset(temp, 0, 64);
@@ -155,7 +165,7 @@ void handle_work(int sockfd, char* buffer)
     if (strlen(temp) != 8)
     {
         send_erro((BYTE*)"Invalid difficulty", sockfd);
-        fprintf(stdout, "Solution\n");
+        fprintf(stdout, "Invalid difficulty of %s\n", temp);
         fflush(stdout);
         return;
     }
@@ -228,14 +238,14 @@ void send_erro (BYTE error[40], int sockfd)
     concatenated[42] = '\r';
     concatenated[43] = '\n';
     int n = send(sockfd, concatenated, strlen((char*)concatenated), 0);
-    log((char*)concatenated, SERV_ADR, sockfd);
+    log_to_file((char*)concatenated, SERV_ADR, sockfd);
 	if (n != (int)strlen((char*)concatenated))
 	{
         fprintf(stdout, "In send erro and found an error %d and %ld\n", n,
                                                 strlen((char*)concatenated));
         fflush(stdout);
 		perror("ERROR writing to socket");
-        log("ERROR writing to socket", SERV_ADR, sockfd);
+        log_to_file("ERROR writing to socket", SERV_ADR, sockfd);
         fflush(stdout);
 		// TODO: remove this
 		// exit(1);
@@ -248,7 +258,7 @@ void send_msg (BYTE msg[40], int sockfd)
     memset(new_msg, 0, 40+MSG_HEADER);
     strcat((char*)new_msg, (char*)msg);
     strcat((char*)new_msg, "\r\n");
-    log((char*)new_msg, SERV_ADR, sockfd);
+    log_to_file((char*)new_msg, SERV_ADR, sockfd);
 	if (send(sockfd, new_msg, strlen((char*)new_msg), 0) !=
 												(int)strlen((char*)new_msg))
 	{
@@ -256,7 +266,7 @@ void send_msg (BYTE msg[40], int sockfd)
         fflush(stdout);
 		perror("ERROR writing to socket");
         fflush(stdout);
-        log("ERROR writing to socket", SERV_ADR, sockfd);
+        log_to_file("ERROR writing to socket", SERV_ADR, sockfd);
         // TODO: Not sure about this
 		// exit(1);
 	}
