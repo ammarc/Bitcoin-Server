@@ -4,6 +4,7 @@
 #include "sha256.h"
 #include "list.h"
 #define MSG_HEADER 4
+#define MAX_MSG_LEN 128
 
 void handle_input(int sockfd, char* buffer, List* list);
 
@@ -25,6 +26,6 @@ void handle_other(int sockfd);
 
 void send_erro (BYTE error[40], int newsockfd);
 
-void send_msg (BYTE msg[40], int sockfd);
+void send_msg (BYTE msg[MAX_MSG_LEN], int sockfd);
 
 #endif

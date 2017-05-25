@@ -102,11 +102,17 @@ bool check_sol(struct soln_args args)
 void work(struct work_args args)
 {
 	//fprintf(stdout, "----------------Start Work----------------\n");
+	/*if (args.worker_count > 0)
+	{
+		send_erro((BYTE*)"ab", args.sockfd);
+		return;
+	}*/
 	int i;
 	BYTE curr_value[32];
 	uint256_init(curr_value);
 	
-	char soln_msg[40];
+	BYTE soln_msg[MAX_MSG_LEN];
+	memset(soln_msg, '\0', MAX_MSG_LEN);
 	char temp[40];
 
 	uint32_t difficulty = args.difficulty;
@@ -135,18 +141,19 @@ void work(struct work_args args)
 
     
 	// need to send the solution to the client
-	sprintf(soln_msg, "%s %x ", "SOLN", difficulty);
+	sprintf((char*)soln_msg, "%s %x ", "SOLN", difficulty);
 	
 	for (i = 0; i < 32; i++)
 	{
 		sprintf(temp, "%02x", seed[i]);
-		strcat(soln_msg, temp);
+		strcat((char*)soln_msg, temp);
 	}
     
-	sprintf(temp, " %" PRIx64 "\r\n", nonce);
-	strcat(soln_msg, temp);
+	sprintf(temp, " %016" PRIx64, nonce);
+	strcat((char*)soln_msg, temp);
+
+	fprintf(stdout, "I've to %s\n", soln_msg);
+	fflush(stdout);
 
 	send_msg((BYTE*)soln_msg, sockfd);
-	thread_count--;
-	//fprintf(stdout, "----------------End Work----------------\n");
 }

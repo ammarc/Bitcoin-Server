@@ -33,13 +33,15 @@ int main(int argc, char **argv)
 	int n, i, j, k = 0;
 	int client_sockets[MAX_CLIENTS], max_sd, activity;
 	fd_set readfds;
-	List* work_queue = malloc(sizeof(List));
+	List* work_queue = new_list();
 	// a buffer for each of the clients
 	char** buffers = malloc(sizeof(char*)*100);
 	char temp[256];
+	memset(temp, '\0', 256);
 	log_file = fopen("log.txt", "w");
 	// Printing descriptors in file heading
 	fprintf(log_file, "Time    IP    SocketID    Message\n");
+	fflush(log_file);
 
 	// Handling broken pipes
 	signal(SIGPIPE, SIG_IGN);
@@ -167,7 +169,11 @@ int main(int argc, char **argv)
 					send_erro((BYTE*)"Message length too long", newsockfd);
 					continue;
 				}
+				//fprintf(stdout, "Temp is %s\n", temp);
+				//fprintf(stdout, "Buffer is: %s\n", buffers[i]);
+				//fflush(stdout); 
 				strcat(buffers[i], temp);
+				memset(temp, '\0', 256);
                 if (n == 0)
                 {  
                     //Close the socket and mark as 0 in list for reuse 
@@ -208,14 +214,19 @@ int main(int argc, char **argv)
 
 						if (j != 255 && buffers[i][j] == '\r' && buffers[i][j+1] == '\n')
 						{
-							handle_input(newsockfd, buffers[i], work_queue);
+							//fprintf(stdout, "j is: %d\n", j); 
+							//fflush(stdout); 
+							char *message_to_process = malloc(sizeof(char) * 257);
+							strncpy(message_to_process, buffers[i], j);
+							message_to_process[j] = '\0'; 
+							handle_input(newsockfd, message_to_process, work_queue);
 							k = 0;
 							j += 2;
 							memset(buffers[i], 0, 256);
+							memset(message_to_process, '\0', 257);
 							continue;
 						}
 					}
-					
 				}
             }
         }
@@ -233,12 +244,14 @@ void log_to_file(char* msg, char* ip, int sockfd)
 	curr_time = time(NULL);
 	loc_time = localtime(&curr_time);
 
-	fprintf(log_file, "%s, ", asctime(loc_time));
+	fprintf(log_file, "%02d:%02d:%02d, ", loc_time->tm_hour,
+									loc_time->tm_min, loc_time->tm_sec);
 
 	// Now we need to put in the IP-Address
 	fprintf(log_file, "%s, ", ip);
 
 	fprintf(log_file, "%d, ", sockfd);
 
-	fprintf(log_file, "%s", msg);
+	fprintf(log_file, "%s\n\n", msg);
+	fflush(log_file);
 }

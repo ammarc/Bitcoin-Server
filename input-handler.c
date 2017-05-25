@@ -19,6 +19,8 @@ void handle_input(int sockfd, char* buffer, List* list)
 {
     // Pointing to the same list global list
     work_queue = list;
+    //fprintf(stdout, "Handling input %s\n", buffer);
+    //fflush(stdout);
 
     if (strncmp(buffer, PING, 4) == 0)
     {
@@ -69,11 +71,12 @@ void handle_pong(int sockfd)
 void handle_soln(int sockfd, char* buffer)
 {
     //TODO: need to check for formatting as well
-    //fprintf(stdout, "Starting soln with buffer %s\n", buffer);
-    //fflush(stdout);
+    fprintf(stdout, "Starting soln with buffer %s\n", buffer);
+    fflush(stdout);
     struct soln_args in_args;
     char temp[64+1];
     memset(temp, 0, 65);
+    uint256_init(in_args.seed);
 
     strtok(buffer, " ");
 
@@ -137,7 +140,8 @@ void handle_soln(int sockfd, char* buffer)
         sprintf((char*)error, "%" PRIx64 " is invalid", in_args.solution);
         send_erro(error, sockfd);
     }
-
+    fprintf(stdout, "------------------End Soln---------------\n");
+    fflush(stdout);
 }
 
 void handle_erro(int sockfd)
@@ -150,8 +154,12 @@ void handle_erro(int sockfd)
 void handle_work(int sockfd, char* buffer)
 {
     //TODO: need to check for formatting as well
-    fprintf(stdout, "Starting work with buffer %s\n", buffer);
-    fflush(stdout);
+    //fprintf(stdout, "Starting work with buffer %s\n", buffer);
+    //fflush(stdout);
+    list_add_end(work_queue, buffer);
+
+    buffer = list_remove_start(work_queue);
+
     struct work_args in_args;
     char temp[64+1];
     memset(temp, 0, 64);
@@ -182,9 +190,9 @@ void handle_work(int sockfd, char* buffer)
 
     in_args.start = strtol((strtok(NULL, " ")), NULL, 16);
 
-    in_args.worker_count = strtol((strtok(NULL, " ")), NULL, 16);
+    in_args.worker_count = strtol((strtok(NULL, "\r\n")), NULL, 16);
+    //fprintf(stdout, "Worker count: %d\n", in_args.worker_count); 
 
-    list_add_end(work_queue, buffer);
 
     /*fprintf(stderr, "Difficulty is %d\n", in_args.difficulty);
     fprintf(stderr, "Seed is ");
@@ -194,9 +202,9 @@ void handle_work(int sockfd, char* buffer)
 	fprintf(stderr, "Socket is %d\n", in_args.sockfd);*/
     // Make a new thread for the work function
     // TODO: Allow for than 2 threads
-    pthread_create(&tid[thread_count], NULL, (void *)work, &in_args);
-    thread_count++;
-    //work(in_args);
+    //pthread_create(&tid[thread_count], NULL, (void *)work, &in_args);
+    //thread_count++;
+    work(in_args);
 
     // The work has been done, so it can be removed from the list
     list_remove_start(work_queue);
@@ -252,16 +260,24 @@ void send_erro (BYTE error[40], int sockfd)
 	}
 }
 
-void send_msg (BYTE msg[40], int sockfd)
+void send_msg (BYTE msg[MAX_MSG_LEN], int sockfd)
 {
-    BYTE new_msg[40+MSG_HEADER];
-    memset(new_msg, 0, 40+MSG_HEADER);
+    int i;
+    BYTE new_msg[MAX_MSG_LEN+2];
+    memset(new_msg, '\0', MAX_MSG_LEN+2);
     strcat((char*)new_msg, (char*)msg);
+
+	//strcat((char*)concatenated, "\r\n");
+    //concatenated[strlen((char*)concatenated)] = '\0';
     strcat((char*)new_msg, "\r\n");
-    log_to_file((char*)new_msg, SERV_ADR, sockfd);
+    //fprintf(stdout, "I have to send message %s\n\n\n\n", new_msg);
+    //fflush(stdout);
+
+    //log_to_file((char*)new_msg, SERV_ADR, sockfd);
 	if (send(sockfd, new_msg, strlen((char*)new_msg), 0) !=
 												(int)strlen((char*)new_msg))
 	{
+        fprintf(stdout, "B4\n");
         fprintf(stdout, "In send msg with %s\n", new_msg);
         fflush(stdout);
 		perror("ERROR writing to socket");
@@ -270,4 +286,6 @@ void send_msg (BYTE msg[40], int sockfd)
         // TODO: Not sure about this
 		// exit(1);
 	}
+    //fprintf(stdout, "After\n");
+    //fflush(stdout);
 }
