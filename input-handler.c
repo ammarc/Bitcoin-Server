@@ -70,7 +70,13 @@ void handle_pong(int sockfd)
 
 void handle_soln(int sockfd, char* buffer)
 {
-    //TODO: need to check for formatting as well
+    // Checking the length of SOLN
+    if (strlen(buffer) < SOLN_LEN)
+    {
+        send_erro((BYTE*)"SOLN message too short", sockfd);
+        return;
+    }
+
     fprintf(stdout, "Starting soln with buffer %s\n", buffer);
     fflush(stdout);
     struct soln_args in_args;
@@ -130,14 +136,15 @@ void handle_soln(int sockfd, char* buffer)
     //pthread_t tid[2];
     //pthread_create(&tid[0], NULL, (void *)check_sol, &in_args);
 
-    if (check_sol(in_args))
+    if (check_sol(in_args, NULL))
     {
         send_msg((BYTE*)OKAY, sockfd);
     }
     else
     {
         BYTE error[40];
-        sprintf((char*)error, "%" PRIx64 " is invalid", in_args.solution);
+        sprintf((char*)error, "%" PRIx64 " is invalid solution"
+                                                        , in_args.solution);
         send_erro(error, sockfd);
     }
     fprintf(stdout, "------------------End Soln---------------\n");
@@ -153,12 +160,19 @@ void handle_erro(int sockfd)
 
 void handle_work(int sockfd, char* buffer)
 {
+    // Checking the length of WORK
+    if (strlen(buffer) < WORK_LEN)
+    {
+        send_erro((BYTE*)"WORK message too short", sockfd);
+        return;
+    }
+
     //TODO: need to check for formatting as well
     //fprintf(stdout, "Starting work with buffer %s\n", buffer);
     //fflush(stdout);
-    list_add_end(work_queue, buffer);
+    //list_add_end(work_queue, buffer);
 
-    buffer = list_remove_start(work_queue);
+    //buffer = list_remove_start(work_queue);
 
     struct work_args in_args;
     char temp[64+1];
@@ -207,7 +221,7 @@ void handle_work(int sockfd, char* buffer)
     work(in_args);
 
     // The work has been done, so it can be removed from the list
-    list_remove_start(work_queue);
+    //list_remove_start(work_queue);
 }
 
 void handle_abrt(int sockfd){}

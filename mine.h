@@ -18,11 +18,14 @@ struct work_args
     BYTE seed[64];
     uint64_t start;
     uint8_t worker_count;
+    BYTE* target;
     int sockfd;
 };
 
-bool check_sol(struct soln_args args);
+bool check_sol(struct soln_args args, BYTE* target);
 
 void work(struct work_args args);
+
+BYTE* find_target(uint32_t difficulty);
 
 #endif

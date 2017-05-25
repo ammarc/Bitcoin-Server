@@ -10,11 +10,10 @@
 #include "mine.h"
 #include "input-handler.h"
 
-bool check_sol(struct soln_args args)
+bool check_sol(struct soln_args args, BYTE* target)
 {
 	//fprintf(stdout, "----------------Start Soln----------------\n");
 	int i;
-	uint32_t exponent;
     uint32_t difficulty = args.difficulty;
     BYTE seed[64];
 	for (i = 0; i < 32; i++)
@@ -25,15 +24,12 @@ bool check_sol(struct soln_args args)
 	uint256_init(x);
 	BYTE temp[64];
 	uint256_init(temp);
-	BYTE target[64];
-	uint256_init(target);
+	//BYTE target[64];
 	BYTE hash[SHA256_BLOCK_SIZE];
 	uint256_init(hash);
 
 	SHA256_CTX ctx;
 
-	uint32_t alpha = 0;
-	uint32_t beta = 0;
 	// Finding the x to be checked
 	/*fprintf(stdout, "Seed is: ");
 	print_uint256(seed);
@@ -66,7 +62,89 @@ bool check_sol(struct soln_args args)
 	uint256_init(hash);
 	sha256_final(&ctx, hash);
 
-    // Extracting beta
+	if (target == NULL)
+		target = find_target(difficulty);
+	//fprintf(stderr, "Target is: ");
+	//print_uint256(target);
+	//fprintf(stderr, "\n");
+
+	//fprintf(stdout, "----------------End Soln----------------\n");
+	if (sha256_compare(target, hash) > 0)
+		return true;
+	return false;
+}
+
+void work(struct work_args args)
+{
+	//fprintf(stdout, "----------------Start Work----------------\n");
+	if (args.worker_count > 0)
+	{
+		return;
+	}
+	int i;
+	BYTE curr_value[32];
+	uint256_init(curr_value);
+	
+	BYTE soln_msg[MAX_MSG_LEN];
+	memset(soln_msg, '\0', MAX_MSG_LEN);
+	char temp[40];
+
+	uint32_t difficulty = args.difficulty;
+    BYTE seed[64];
+	for (i = 0; i < 64; i++)
+		seed[i] = args.seed[i];
+    uint64_t start = args.start;
+    uint8_t worker_count = args.worker_count;
+    int sockfd = args.sockfd;
+	uint64_t nonce = start;
+
+	struct soln_args in_args;
+	in_args.difficulty = difficulty;
+
+	args.target = find_target(args.difficulty);
+	
+	for (i = 0; i < 64; i++)
+		in_args.seed[i] = args.seed[i];
+	
+	in_args.solution = nonce;
+
+	while (!check_sol(in_args, args.target))
+	{
+		nonce++;
+		in_args.solution = nonce;
+	}
+
+    // Free the target since we are done with it
+	free(args.target);
+	// need to send the solution to the client
+	sprintf((char*)soln_msg, "%s %x ", "SOLN", difficulty);
+	
+	for (i = 0; i < 32; i++)
+	{
+		sprintf(temp, "%02x", seed[i]);
+		strcat((char*)soln_msg, temp);
+	}
+    
+	sprintf(temp, " %016" PRIx64, nonce);
+	strcat((char*)soln_msg, temp);
+
+	fprintf(stdout, "I've to %s\n", soln_msg);
+	fflush(stdout);
+
+	send_msg((BYTE*)soln_msg, sockfd);
+}
+
+BYTE* find_target(uint32_t difficulty)
+{
+	BYTE* target = malloc(sizeof(BYTE)*64);
+	uint256_init(target);
+	uint32_t alpha = 0;
+	uint32_t beta = 0;
+	BYTE temp[64];
+	uint256_init(temp);
+	uint32_t exponent;
+
+	// Extracting beta
 	beta = ((1 << 24) - 1) & difficulty;
 	// Extracting alpha
 	alpha = ((1 << 8) - 1) & (difficulty >> 24);
@@ -87,73 +165,7 @@ bool check_sol(struct soln_args args)
 		beta_rep[i] = beta_copy & 0xFF;
 		beta_copy = beta_copy >> 8;
 	}
-    uint256_mul(target, beta_rep, temp);
-	//fprintf(stderr, "Target is: ");
-	//print_uint256(target);
-	//fprintf(stderr, "\n");
+	uint256_mul(target, beta_rep, temp);
 
-
-	//fprintf(stdout, "----------------End Soln----------------\n");
-	if (sha256_compare(target, hash) > 0)
-		return true;
-	return false;
-}
-
-void work(struct work_args args)
-{
-	//fprintf(stdout, "----------------Start Work----------------\n");
-	/*if (args.worker_count > 0)
-	{
-		send_erro((BYTE*)"ab", args.sockfd);
-		return;
-	}*/
-	int i;
-	BYTE curr_value[32];
-	uint256_init(curr_value);
-	
-	BYTE soln_msg[MAX_MSG_LEN];
-	memset(soln_msg, '\0', MAX_MSG_LEN);
-	char temp[40];
-
-	uint32_t difficulty = args.difficulty;
-    BYTE seed[64];
-	for (i = 0; i < 64; i++)
-		seed[i] = args.seed[i];
-    uint64_t start = args.start;
-    uint8_t worker_count = args.worker_count;
-    int sockfd = args.sockfd;
-	uint64_t nonce = start;
-
-
-	struct soln_args in_args;
-	in_args.difficulty = difficulty;
-	
-	for (i = 0; i < 64; i++)
-		in_args.seed[i] = args.seed[i];
-	
-	in_args.solution = nonce;
-
-	while (!check_sol(in_args))
-	{
-		nonce++;
-		in_args.solution = nonce;
-	}
-
-    
-	// need to send the solution to the client
-	sprintf((char*)soln_msg, "%s %x ", "SOLN", difficulty);
-	
-	for (i = 0; i < 32; i++)
-	{
-		sprintf(temp, "%02x", seed[i]);
-		strcat((char*)soln_msg, temp);
-	}
-    
-	sprintf(temp, " %016" PRIx64, nonce);
-	strcat((char*)soln_msg, temp);
-
-	fprintf(stdout, "I've to %s\n", soln_msg);
-	fflush(stdout);
-
-	send_msg((BYTE*)soln_msg, sockfd);
+	return target;
 }

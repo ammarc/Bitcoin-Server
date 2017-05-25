@@ -33,6 +33,7 @@ int main(int argc, char **argv)
 	int n, i, j, k = 0;
 	int client_sockets[MAX_CLIENTS], max_sd, activity;
 	fd_set readfds;
+	
 	List* work_queue = new_list();
 	// a buffer for each of the clients
 	char** buffers = malloc(sizeof(char*)*100);

@@ -5,6 +5,8 @@
 #include "list.h"
 #define MSG_HEADER 4
 #define MAX_MSG_LEN 128
+#define SOLN_LEN 95
+#define WORK_LEN 98
 
 void handle_input(int sockfd, char* buffer, List* list);
 
