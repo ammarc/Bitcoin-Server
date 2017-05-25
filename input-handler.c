@@ -2,6 +2,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <errno.h>
+#include <unistd.h>
 #include <inttypes.h>
 #include <pthread.h>
 #include "input-handler.h"
@@ -89,7 +90,7 @@ void handle_soln(int sockfd, char* buffer)
     temp[strlen(temp)] = '\0';
     if (strlen(temp) != 64)
     {
-        send_erro("Invalid seed", sockfd);
+        send_erro((BYTE*)"Invalid seed", sockfd);
         fprintf(stdout, "Seed\n");
         return;
     }
@@ -109,7 +110,7 @@ void handle_soln(int sockfd, char* buffer)
     in_args.solution = strtol(temp, NULL, 16);
     if (strlen(temp) != 16)
     {
-        send_erro("Invalid solution", sockfd);
+        send_erro((BYTE*)"Invalid solution", sockfd);
         fprintf(stdout, "Solution\n");
         return;
     }
@@ -120,13 +121,7 @@ void handle_soln(int sockfd, char* buffer)
 
     if (check_sol(in_args))
     {
-        if(send(sockfd, OKAY, strlen(OKAY), 0) != strlen(OKAY))
-        {
-	        fprintf(stdout, "Error in soln okay\n");
-            fflush(stdout);
-            perror("ERROR writing to socket");
-            exit(1);
-        }
+        send_msg((BYTE*)OKAY, sockfd);
     }
     else
     {
@@ -159,7 +154,7 @@ void handle_work(int sockfd, char* buffer)
     in_args.difficulty = strtol(temp, NULL, 16);
     if (strlen(temp) != 8)
     {
-        send_erro("Invalid difficulty", sockfd);
+        send_erro((BYTE*)"Invalid difficulty", sockfd);
         fprintf(stdout, "Solution\n");
         fflush(stdout);
         return;
@@ -217,28 +212,33 @@ void handle_other(int sockfd)
 
 void send_erro (BYTE error[40], int sockfd)
 {
+    int i;
 	// TODO: remove this magic number
     BYTE concatenated[40+MSG_HEADER];
     memset(concatenated, '\0', 40+MSG_HEADER);
 	strcat((char*)concatenated, ERRO);
 	strcat((char*)concatenated, ": ");
 	strcat((char*)concatenated, (char*)error);
-	strcat((char*)concatenated, "\r\n");
-    concatenated[strlen((char*)concatenated)] = '\0';
-    //concatenated[38] = '\r';
-    //concatenated[39] = '\n';
-    int n = 0;
-	if ((n = send(sockfd, concatenated, strlen((char*)concatenated), 0)) !=
-										(int)strlen((char*)concatenated))
+    for (i = strlen((char*)concatenated); i < 40+MSG_HEADER-2; i++)
+    {
+        concatenated[i] = ' ';
+    }
+	//strcat((char*)concatenated, "\r\n");
+    //concatenated[strlen((char*)concatenated)] = '\0';
+    concatenated[42] = '\r';
+    concatenated[43] = '\n';
+    int n = send(sockfd, concatenated, strlen((char*)concatenated), 0);
+    log((char*)concatenated, SERV_ADR, sockfd);
+	if (n != (int)strlen((char*)concatenated))
 	{
-
-        fprintf(stdout, "In send erro and found an error %d and %ld\n", n, strlen((char*)concatenated));
-        fflush(stdout);
-        fprintf(stdout, "In send erro and found an error\n");
+        fprintf(stdout, "In send erro and found an error %d and %ld\n", n,
+                                                strlen((char*)concatenated));
         fflush(stdout);
 		perror("ERROR writing to socket");
+        log("ERROR writing to socket", SERV_ADR, sockfd);
+        fflush(stdout);
 		// TODO: remove this
-		exit(1);
+		// exit(1);
 	}
 }
 
@@ -248,12 +248,16 @@ void send_msg (BYTE msg[40], int sockfd)
     memset(new_msg, 0, 40+MSG_HEADER);
     strcat((char*)new_msg, (char*)msg);
     strcat((char*)new_msg, "\r\n");
+    log((char*)new_msg, SERV_ADR, sockfd);
 	if (send(sockfd, new_msg, strlen((char*)new_msg), 0) !=
 												(int)strlen((char*)new_msg))
 	{
         fprintf(stdout, "In send msg with %s\n", new_msg);
         fflush(stdout);
 		perror("ERROR writing to socket");
-		exit(1);
+        fflush(stdout);
+        log("ERROR writing to socket", SERV_ADR, sockfd);
+        // TODO: Not sure about this
+		// exit(1);
 	}
 }

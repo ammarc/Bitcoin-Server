@@ -8,6 +8,7 @@
 #include <netinet/in.h>
 #include <inttypes.h>
 #include "mine.h"
+#include "input-handler.h"
 
 bool check_sol(struct soln_args args)
 {
@@ -145,13 +146,6 @@ void work(struct work_args args)
 	sprintf(temp, " %" PRIx64 "\r\n", nonce);
 	strcat(soln_msg, temp);
 
-	if (send(args.sockfd, soln_msg, strlen(soln_msg), 0) != 
-													(int)strlen(soln_msg))
-	{
-		perror("ERROR writing to socket");
-		fprintf(stdout, "Error in work\n");
-		fflush(stdout);
-		exit(1);
-	}
+	send_msg((BYTE*)soln_msg, sockfd);
 	//fprintf(stdout, "----------------End Work----------------\n");
 }

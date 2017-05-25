@@ -14,6 +14,7 @@
 #include <sys/types.h> 
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <errno.h>
 #include <inttypes.h>
 #include <stdbool.h>
@@ -22,11 +23,12 @@
 #include "list.h"
 #include "input-handler.h"
 
+FILE* log_file;
 
 int main(int argc, char **argv)
 {
 	int sockfd, newsockfd, portno, servlen;
-	struct sockaddr_in serv_addr;
+	struct sockaddr_in address;
 	int n, i, j, k = 0;
 	int client_sockets[MAX_CLIENTS], max_sd, activity;
 	fd_set readfds;
@@ -34,6 +36,12 @@ int main(int argc, char **argv)
 	// a buffer for each of the clients
 	char** buffers = malloc(sizeof(char*)*100);
 	char temp[256];
+	log_file = fopen("log.txt", "w");
+	// Printing descriptors in file heading
+	fprintf(log_file, "Time    IP    SocketID    Message\n");
+
+	// Handling broken pipes
+	signal(SIGPIPE, SIG_IGN);
 
 	for (i = 0; i < MAX_CLIENTS; i++)
 		client_sockets[i] = 0;
@@ -54,7 +62,7 @@ int main(int argc, char **argv)
 	}
 
 	
-	bzero((char *) &serv_addr, sizeof(serv_addr));
+	bzero((char *) &address, sizeof(address));
 
 	portno = atoi(argv[1]);
 	
@@ -62,14 +70,14 @@ int main(int argc, char **argv)
 	 - converted to network byte order & any IP address for 
 	 this machine */
 	
-	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_addr.s_addr = INADDR_ANY;
-	serv_addr.sin_port = htons(portno);  // store in machine-neutral format
+	address.sin_family = AF_INET;
+	address.sin_addr.s_addr = INADDR_ANY;
+	address.sin_port = htons(portno);  // store in machine-neutral format
 
 	 /* Bind address to the socket */
 	
-	if (bind(sockfd, (struct sockaddr *) &serv_addr,
-			sizeof(serv_addr)) < 0) 
+	if (bind(sockfd, (struct sockaddr *) &address,
+			sizeof(address)) < 0) 
 	{
 		perror("ERROR on binding");
 		exit(1);
@@ -82,7 +90,7 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);  
     }  
 	
-	servlen = sizeof(serv_addr);
+	servlen = sizeof(address);
 
 	//TODO: change this to accomodate for windows carriage return
 	while (true)
@@ -116,7 +124,7 @@ int main(int argc, char **argv)
 			/* Accept a connection - block until a connection is ready to
 			be accepted. Get back a new file descriptor to communicate on. */
             if ((newsockfd = accept(sockfd, 
-                    (struct sockaddr *)&serv_addr, (socklen_t*)&servlen)) < 0)  
+                    (struct sockaddr *)&address, (socklen_t*)&servlen)) < 0)  
             {  
                 perror("accept");  
                 exit(EXIT_FAILURE);  
@@ -152,8 +160,12 @@ int main(int argc, char **argv)
                 //incoming message 
 				//TODO: remove magic number for the size of val read
 				n = read(newsockfd, temp, 256);
+				log(temp, inet_ntoa(address.sin_addr), newsockfd);
 				if (n+strlen(buffers[i]) > 256)
+				{
 					send_erro((BYTE*)"Message length too long", newsockfd);
+					continue;
+				}
 				strcat(buffers[i], temp);
                 if (n == 0)
                 {  
@@ -185,4 +197,22 @@ int main(int argc, char **argv)
 	/* close socket */
 	close(sockfd);
 	return 0; 
+}
+
+void log(char* msg, char* ip, int sockfd)
+{
+	struct tm* loc_time;
+	time_t curr_time;
+
+	curr_time = time(NULL);
+	loc_time = localtime(&curr_time);
+
+	fprintf(log_file, "%s, ", asctime(loc_time));
+
+	// Now we need to put in the IP-Address
+	fprintf(log_file, "%s, ", ip);
+
+	fprintf(log_file, "%d, ", sockfd);
+
+	fprintf(log_file, "%s", msg);
 }
