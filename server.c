@@ -1,5 +1,4 @@
-/*
- *  Project 2 for COMP30023: Computer Systems
+/*  Project 2 for COMP30023: Computer Systems
  *  at the University of Melbourne
  *  Semester 1, 2017
  *  by: Ammar Ahmed
@@ -98,6 +97,9 @@ int main(int argc, char **argv)
 	
 	servlen = sizeof(address);
 
+	log_to_file("Starting up the server", 
+								inet_ntoa(address.sin_addr), newsockfd);
+
 	//TODO: change this to accomodate for windows carriage return
 	while (true)
 	{
@@ -149,6 +151,8 @@ int main(int argc, char **argv)
 					buffers[i] = malloc(sizeof(char)*256);
 					memset(buffers[i], '\0', 256);
                     //printf("Adding to list of sockets as %d\n" , i);  
+					log_to_file("Adding new client to list of sockets", 
+								inet_ntoa(address.sin_addr), newsockfd);
                     break;  
                 }  
             }
@@ -161,7 +165,6 @@ int main(int argc, char **argv)
             newsockfd = client_sockets[i];
             if (FD_ISSET(newsockfd , &readfds))  
             {  
-				//fprintf(stderr, "newsockfd is %d\n", newsockfd);
                 //Check if it was for closing , and also read the 
                 //incoming message 
 				//TODO: remove magic number for the size of val read
@@ -172,15 +175,14 @@ int main(int argc, char **argv)
 					send_erro((BYTE*)"Message length too long", newsockfd);
 					continue;
 				}
-				//fprintf(stdout, "Temp is %s\n", temp);
-				//fprintf(stdout, "Buffer is: %s\n", buffers[i]);
-				//fflush(stdout); 
 				strcat(buffers[i], temp);
 				memset(temp, '\0', 256);
                 if (n == 0)
                 {  
                     // Close the socket and mark as 0 in list for reuse
 					// We also need to free all its jobs in the queue
+					log_to_file("Disconnecting this client from the server", 
+								inet_ntoa(address.sin_addr), newsockfd);
 					handle_abrt(newsockfd, work_queue, false);
 					free(buffers[i]);
                     close(newsockfd);
@@ -196,13 +198,9 @@ int main(int argc, char **argv)
 
 						if (j != 255 && buffers[i][j] == '\r' && buffers[i][j+1] == '\n')
 						{
-							//fprintf(stdout, "j is: %d\n", j); 
-							//fflush(stdout); 
 							char *message_to_process = malloc(sizeof(char) * 257);
 							strncpy(message_to_process, buffers[i], j);
 							message_to_process[j] = '\0'; 
-							fprintf(stdout, "Queue size is %d\n", work_queue->size);
-							fflush(stdout);
 							handle_input(newsockfd, message_to_process, work_queue);
 							k = 0;
 							j += 2;
@@ -243,26 +241,22 @@ void log_to_file(char* msg, char* ip, int sockfd)
 
 void search_for_work()
 {
-	fprintf(stdout, "IN\n"); fflush(stdout);
 	while(true)
 	{
 		//fprintf(stdout, "Threads find size %d\n", work_queue->size);
 		//fflush(stdout);
-		if (work_queue->size > 0)
+		if (get_size(work_queue) > 0)
 		{
-			fprintf(stdout, "Starting work\n"); fflush(stdout);
+			//fprintf(stdout, "Starting work\n"); fflush(stdout);
 			struct work_args * args = (struct work_args*)work_queue->head->data;
 			work(*args);
-			fprintf(stdout, "Length of the queue: %d\n", work_queue->size); 
-			fflush(stdout);
 			list_remove_start(work_queue);
 		}
 	}
-	fprintf(stdout, "OUT\n"); fflush(stdout);
 }
 
 void add_to_queue(void* in_args)
 {
 	list_add_end(work_queue, in_args);
-	fprintf(stdout, "Length of queue is now %d\n", work_queue->size);
+	//fprintf(stdout, "Length of queue is now %d\n", work_queue->size);
 }

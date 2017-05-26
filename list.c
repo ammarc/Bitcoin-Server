@@ -254,3 +254,5 @@ bool list_is_empty(List *list)
 	assert(list != NULL);
 	return (list->size==0);
 }
+
+int get_size(List* list) { return list->size; }

@@ -76,4 +76,6 @@ void list_remove_process (List* list, int pid);
 // removes from the list middle
 void list_remove_middle(List* list, Node* node);
 
+int get_size(List* list);
+
 #endif

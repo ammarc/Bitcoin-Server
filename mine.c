@@ -1,3 +1,10 @@
+/*  Project 2 for COMP30023: Computer Systems
+ *  at the University of Melbourne
+ *  Semester 1, 2017
+ *  by: Ammar Ahmed
+ *  Username: ammara
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -82,9 +89,8 @@ bool check_sol(struct soln_args args, BYTE* target)
 
 void work(struct work_args args)
 {
-	fprintf(stdout, "----------------Start Work----------------\n");
-	fprintf(stdout, "The abort flag is %d\n", abrt_flag);
-	fflush(stdout);
+	//fprintf(stdout, "----------------Start Work----------------\n");
+	//fflush(stdout);
 	/*if(args.worker_count>1)
 		return;*/
 
@@ -110,16 +116,16 @@ void work(struct work_args args)
     uint8_t worker_count = args.worker_count;
     int sockfd = args.sockfd;
 	uint64_t nonce = args.start;
-	fprintf(stdout, "Nonce is %" PRIx64 "\n", nonce);
-	fflush(stdout);
+	//fprintf(stdout, "Nonce is %" PRIx64 "\n", nonce);
+	//fflush(stdout);
 
 	struct soln_args in_args;
 	in_args.difficulty = difficulty;
 
 	args.target = find_target(args.difficulty);
 
-	fprintf(stdout, "Found target in work:\n");
-	print_uint256(args.target);
+	//fprintf(stdout, "Found target in work:\n");
+	//print_uint256(args.target);
 	
 	for (i = 0; i < 64; i++)
 		in_args.seed[i] = args.seed[i];
@@ -131,15 +137,13 @@ void work(struct work_args args)
 		if (abrt_flag)
 		{
 			set_abrt_false();
-			fprintf(stdout, "YAAAAAAAAAY\n");
 			return;
 		}
 		nonce++;
-		//fprintf(stdout, "Nonce is %" PRIu64 "\n", nonce);
 		in_args.solution = nonce;
 	}
 
-	fprintf(stdout, "Nonce is %" PRIx64 "\n", nonce);
+	//fprintf(stdout, "Nonce is %" PRIx64 "\n", nonce);
 
     // Free the target since we are done with it
 	free(args.target);
@@ -159,7 +163,7 @@ void work(struct work_args args)
 	//fflush(stdout);
 
 	send_msg((BYTE*)soln_msg, sockfd);
-	fprintf(stdout, "---------END-------\n"); fflush(stdout);
+	//fprintf(stdout, "---------END-------\n"); fflush(stdout);
 }
 
 BYTE* find_target(uint32_t difficulty)

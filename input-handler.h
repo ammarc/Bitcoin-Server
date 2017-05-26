@@ -1,3 +1,10 @@
+/*  Project 2 for COMP30023: Computer Systems
+ *  at the University of Melbourne
+ *  Semester 1, 2017
+ *  by: Ammar Ahmed
+ *  Username: ammara
+ */
+
 #ifndef HANDLER_H
 #define HANDLER_H
 
