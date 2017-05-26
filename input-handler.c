@@ -9,9 +9,6 @@
 #include "server.h"
 #include "mine.h"
 
-int thread_count = 0;
-pthread_t tid[25];
-
 // Making a global list for all the submitted work
 List* work_queue;
 
@@ -77,8 +74,6 @@ void handle_soln(int sockfd, char* buffer)
         return;
     }
 
-    fprintf(stdout, "Starting soln with buffer %s\n", buffer);
-    fflush(stdout);
     struct soln_args in_args;
     char temp[64+1];
     memset(temp, 0, 65);
@@ -161,6 +156,8 @@ void handle_erro(int sockfd)
 void handle_work(int sockfd, char* buffer)
 {
     // Checking the length of WORK
+    fprintf(stdout, "Starting work with buffer %s\n", buffer);
+    fflush(stdout);
     if (strlen(buffer) < WORK_LEN)
     {
         send_erro((BYTE*)"WORK message too short", sockfd);
@@ -174,16 +171,18 @@ void handle_work(int sockfd, char* buffer)
 
     //buffer = list_remove_start(work_queue);
 
-    struct work_args in_args;
+    // TODO: possible error in this line:
+    struct work_args *in_args = malloc(sizeof(struct work_args));
+
     char temp[64+1];
     memset(temp, 0, 64);
 
-    in_args.sockfd = sockfd;
+    in_args->sockfd = sockfd;
 
     strtok(buffer, " ");
 
     strcpy(temp, strtok(NULL, " "));
-    in_args.difficulty = strtol(temp, NULL, 16);
+    in_args->difficulty = strtol(temp, NULL, 16);
     if (strlen(temp) != 8)
     {
         send_erro((BYTE*)"Invalid difficulty", sockfd);
@@ -191,20 +190,57 @@ void handle_work(int sockfd, char* buffer)
         fflush(stdout);
         return;
     }
+
     
+    //strcpy(temp, strtok(NULL, " "));
+    //temp[64] = '\0';
+    uint256_init(in_args->seed);
+    // Extracting Seed
+    memset(temp, 0, 65);
     strcpy(temp, strtok(NULL, " "));
-    temp[64] = '\0';
+    temp[strlen(temp)] = '\0';
+    if (strlen(temp) != 64)
+    {
+        send_erro((BYTE*)"Invalid seed", sockfd);
+        fprintf(stdout, "Seed\n");
+        return;
+    }
     for(int i = 62; i >= 0; i-=2)
     {
-        char str[2];
-        strcpy(str, &temp[i]);
-        in_args.seed[i/2] = strtol(str, NULL, 16) & 0xFF;
+        // Putting two hexes into one byte
+        char str[3];
+        memset(str, 0, 3);
+        strncpy(str, temp+i, 2);
+        str[2] = '\0';
+        in_args->seed[i/2] = (strtol(str, NULL, 16)) & 0xFF;
         temp[i] = '\0';
     }
 
-    in_args.start = strtol((strtok(NULL, " ")), NULL, 16);
+    // Extracting solution
+    memset(temp, '\0', 65);
+    
+    strcpy(temp, strtok(NULL, " "));
+    if (strlen(temp) != 16)
+    {
+        send_erro((BYTE*)"Invalid start", sockfd);
+        fprintf(stdout, "Temp was %s\n", temp);
+        fflush(stdout);
+        return;
+    }
+    in_args->start = strtol(temp, NULL, 16);
+    // Extracting worker count
+    memset(temp, '\0', 65);
+    
+    strcpy(temp, strtok(NULL, "\r\n"));
+    in_args->worker_count = strtol(temp, NULL, 16);
+    if (strlen(temp) != 2)
+    {
+        send_erro((BYTE*)"Invalid worker count", sockfd);
+        fprintf(stdout, "Temp was %s\n", temp);
+        fflush(stdout);
+        return;
+    }
 
-    in_args.worker_count = strtol((strtok(NULL, "\r\n")), NULL, 16);
     //fprintf(stdout, "Worker count: %d\n", in_args.worker_count); 
 
 
@@ -214,17 +250,35 @@ void handle_work(int sockfd, char* buffer)
     fprintf(stderr, "Start is %" PRId64 "\n", in_args.start);
     fprintf(stderr, "Worker count is %d\n", in_args.worker_count);
 	fprintf(stderr, "Socket is %d\n", in_args.sockfd);*/
-    // Make a new thread for the work function
-    // TODO: Allow for than 2 threads
-    //pthread_create(&tid[thread_count], NULL, (void *)work, &in_args);
-    //thread_count++;
-    work(in_args);
 
-    // The work has been done, so it can be removed from the list
-    //list_remove_start(work_queue);
+    list_add_end(work_queue, in_args);
+    fprintf(stdout, "Added to list; now with size %d\n", work_queue->size);
+    fflush(stdout);
+
+    //work(*in_args);
 }
 
-void handle_abrt(int sockfd){}
+void handle_abrt(int sockfd)
+{
+    // Loop through the entire list and delete all nodes with sockfd
+    Node* node = work_queue->head;
+    int node_sockfd;
+    struct work_args* node_args;
+    while(node)
+    {
+        node_args = (struct work_args*)(node->data);
+        node_sockfd = node_args->sockfd;
+        if(node_sockfd == sockfd)
+        {
+            if (node == work_queue->head)
+                set_abrt_true();
+            
+            list_remove_middle(work_queue, node);
+        }
+        node = node->next;
+    }
+    send_msg((BYTE*)OKAY, sockfd);
+}
 
 void handle_okay(int sockfd)
 {
@@ -263,9 +317,9 @@ void send_erro (BYTE error[40], int sockfd)
     log_to_file((char*)concatenated, SERV_ADR, sockfd);
 	if (n != (int)strlen((char*)concatenated))
 	{
-        fprintf(stdout, "In send erro and found an error %d and %ld\n", n,
-                                                strlen((char*)concatenated));
-        fflush(stdout);
+        //fprintf(stdout, "In send erro and found an error %d and %ld\n", n,
+                                                //strlen((char*)concatenated));
+        //fflush(stdout);
 		perror("ERROR writing to socket");
         log_to_file("ERROR writing to socket", SERV_ADR, sockfd);
         fflush(stdout);
@@ -276,7 +330,7 @@ void send_erro (BYTE error[40], int sockfd)
 
 void send_msg (BYTE msg[MAX_MSG_LEN], int sockfd)
 {
-    int i;
+    //int i;
     BYTE new_msg[MAX_MSG_LEN+2];
     memset(new_msg, '\0', MAX_MSG_LEN+2);
     strcat((char*)new_msg, (char*)msg);

@@ -18,4 +18,6 @@
 
 void log_to_file(char* msg, char* ip, int sockfd);
 
+void search_for_work();
+
 #endif

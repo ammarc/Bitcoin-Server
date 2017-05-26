@@ -8,7 +8,10 @@
 #include <netinet/in.h>
 #include <inttypes.h>
 #include "mine.h"
+#include "server.h"
 #include "input-handler.h"
+
+int abrt_flag = 0;
 
 bool check_sol(struct soln_args args, BYTE* target)
 {
@@ -61,6 +64,9 @@ bool check_sol(struct soln_args args, BYTE* target)
 	sha256_update(&ctx, hash, SHA256_BLOCK_SIZE);
 	uint256_init(hash);
 	sha256_final(&ctx, hash);
+	/*fprintf(stdout, "The final hash is\n");
+	print_uint256(hash);
+	fflush(stdout);*/
 
 	if (target == NULL)
 		target = find_target(difficulty);
@@ -76,11 +82,11 @@ bool check_sol(struct soln_args args, BYTE* target)
 
 void work(struct work_args args)
 {
-	//fprintf(stdout, "----------------Start Work----------------\n");
-	if (args.worker_count > 0)
-	{
+	fprintf(stdout, "----------------Start Work----------------\n");
+	fflush(stdout);
+	if(args.worker_count>1)
 		return;
-	}
+
 	int i;
 	BYTE curr_value[32];
 	uint256_init(curr_value);
@@ -102,6 +108,10 @@ void work(struct work_args args)
 	in_args.difficulty = difficulty;
 
 	args.target = find_target(args.difficulty);
+
+	fprintf(stdout, "Found target in work:\n");
+	print_uint256(args.target);
+	fprintf(stdout, "---------END-------\n"); fflush(stdout);
 	
 	for (i = 0; i < 64; i++)
 		in_args.seed[i] = args.seed[i];
@@ -110,14 +120,21 @@ void work(struct work_args args)
 
 	while (!check_sol(in_args, args.target))
 	{
+		if (abrt_flag)
+		{
+			set_abrt_false();
+			return;
+		}
 		nonce++;
 		in_args.solution = nonce;
 	}
 
+	fprintf(stdout, "Nonce is %" PRIx64 "\n", nonce);
+
     // Free the target since we are done with it
 	free(args.target);
 	// need to send the solution to the client
-	sprintf((char*)soln_msg, "%s %x ", "SOLN", difficulty);
+	sprintf((char*)soln_msg, "%s %08x ", SOLN, difficulty);
 	
 	for (i = 0; i < 32; i++)
 	{
@@ -128,8 +145,8 @@ void work(struct work_args args)
 	sprintf(temp, " %016" PRIx64, nonce);
 	strcat((char*)soln_msg, temp);
 
-	fprintf(stdout, "I've to %s\n", soln_msg);
-	fflush(stdout);
+	//fprintf(stdout, "I've to %s\n", soln_msg);
+	//fflush(stdout);
 
 	send_msg((BYTE*)soln_msg, sockfd);
 }
@@ -168,4 +185,14 @@ BYTE* find_target(uint32_t difficulty)
 	uint256_mul(target, beta_rep, temp);
 
 	return target;
+}
+
+void set_abrt_false()
+{
+	abrt_flag = 0;
+}
+
+void set_abrt_true()
+{
+	abrt_flag = 1;
 }

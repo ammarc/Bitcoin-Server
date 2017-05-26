@@ -28,4 +28,7 @@ void work(struct work_args args);
 
 BYTE* find_target(uint32_t difficulty);
 
+void set_abrt_true();
+
+void set_abrt_false();
 #endif

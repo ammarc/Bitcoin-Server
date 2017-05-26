@@ -17,6 +17,7 @@
 #define LIST_H
 
 #include <stdbool.h>
+#include <pthread.h>
 
 typedef struct list List;
 
@@ -36,6 +37,7 @@ struct list
 	Node *head;
 	Node *last;
 	int size;
+	pthread_mutex_t lock;
 };
 
 // create a new list and return its pointer
@@ -70,5 +72,8 @@ bool list_is_empty(List *list);
 
 // removes the node from the list given a PID
 void list_remove_process (List* list, int pid);
+
+// removes from the list middle
+void list_remove_middle(List* list, Node* node);
 
 #endif

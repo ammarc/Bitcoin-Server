@@ -41,6 +41,6 @@ submit:
 ## Dependencies
 server.o:	  	 	server.h uint256.h sha256.h list.h
 sha256.o:	  	 	sha256.h
-mine.o:		  	 	mine.h uint256.h sha256.h
+mine.o:		  	 	mine.h uint256.h sha256.h server.h
 input-handler.o: 	input-handler.h mine.h server.h sha256.h list.h
 list.o:				list.h

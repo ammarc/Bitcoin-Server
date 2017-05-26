@@ -25,16 +25,18 @@
 #include "input-handler.h"
 
 FILE* log_file;
+List* work_queue;
 
 int main(int argc, char **argv)
 {
 	int sockfd, newsockfd, portno, servlen;
 	struct sockaddr_in address;
+	pthread_t tid;
 	int n, i, j, k = 0;
 	int client_sockets[MAX_CLIENTS], max_sd, activity;
 	fd_set readfds;
-	
-	List* work_queue = new_list();
+	work_queue = new_list();
+    pthread_create(&tid, NULL, (void*)&search_for_work, NULL);
 	// a buffer for each of the clients
 	char** buffers = malloc(sizeof(char*)*100);
 	char temp[256];
@@ -177,7 +179,9 @@ int main(int argc, char **argv)
 				memset(temp, '\0', 256);
                 if (n == 0)
                 {  
-                    //Close the socket and mark as 0 in list for reuse 
+                    // Close the socket and mark as 0 in list for reuse
+					// We also need to free all its jobs in the queue
+					handle_abrt(newsockfd);
 					free(buffers[i]);
                     close(newsockfd);
                     client_sockets[i] = 0;  
@@ -255,4 +259,19 @@ void log_to_file(char* msg, char* ip, int sockfd)
 
 	fprintf(log_file, "%s\n\n", msg);
 	fflush(log_file);
+}
+
+
+void search_for_work()
+{
+	fprintf(stdout, "IN\n"); fflush(stdout);
+	while(true)
+	{
+		if (work_queue->size > 0)
+		{
+			struct work_args * args = (struct work_args*)work_queue->head->data;
+			work(*args);
+			list_remove_start(work_queue);
+		}
+	}
 }
