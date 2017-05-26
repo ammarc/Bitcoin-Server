@@ -181,37 +181,13 @@ int main(int argc, char **argv)
                 {  
                     // Close the socket and mark as 0 in list for reuse
 					// We also need to free all its jobs in the queue
-					handle_abrt(newsockfd);
+					handle_abrt(newsockfd, work_queue);
 					free(buffers[i]);
                     close(newsockfd);
                     client_sockets[i] = 0;  
                 }
 				else
 				{
-					/*int j = 0;
-					while(buffers[i][j] != '\0')
-					{
-						char *first_msg = malloc(sizeof(char) * (256 + 1)); 
-						char *rem_msg= malloc(sizeof(char) * (256 + 1));
-						memset(rem_msg, '\0', 256 + 1); 
-						if(j != 256 - 1 && buffers[i][j] == '\r' && 
-								buffers[i][j + 1] == '\n')
-						{
-							strncpy(first_msg , buffers[i], j);
-							first_msg [j] = '\0';
-							// Adding 3 for null byte and carriage return
-							strcpy(rem_msg, buffers[i] + j + 3);
-							handle_input(newsockfd, first_msg , work_queue);
-							memset(buffers[i], '\0', 256 + 1);
-							strcpy(buffers[i], rem_msg); 
-							free(rem_msg);
-							free(first_msg);
-							j += 2;    
-						}
-						else
-							j++;
-					}*/
-					
 					for (j = 0; j < 256; j++, k++)
 					{
 						if (buffers[i][j] == '\0')
@@ -224,6 +200,8 @@ int main(int argc, char **argv)
 							char *message_to_process = malloc(sizeof(char) * 257);
 							strncpy(message_to_process, buffers[i], j);
 							message_to_process[j] = '\0'; 
+							fprintf(stdout, "Queue size is %d\n", work_queue->size);
+							fflush(stdout);
 							handle_input(newsockfd, message_to_process, work_queue);
 							k = 0;
 							j += 2;
@@ -269,9 +247,17 @@ void search_for_work()
 	{
 		if (work_queue->size > 0)
 		{
+			fprintf(stdout, "Starting work\n"); fflush(stdout);
 			struct work_args * args = (struct work_args*)work_queue->head->data;
 			work(*args);
 			list_remove_start(work_queue);
 		}
 	}
+	fprintf(stdout, "OUT\n"); fflush(stdout);
+}
+
+void add_to_queue(void* in_args)
+{
+	list_add_end(work_queue, in_args);
+	fprintf(stdout, "Length of queue is now %d\n", work_queue->size);
 }

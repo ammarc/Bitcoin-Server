@@ -15,9 +15,12 @@
 #include <stdbool.h>
 #include "uint256.h"
 #include "sha256.h"
+#include "list.h"
 
 void log_to_file(char* msg, char* ip, int sockfd);
 
 void search_for_work();
+
+void add_to_queue(void* in_args);
 
 #endif

@@ -8,7 +8,7 @@
 #define SOLN_LEN 95
 #define WORK_LEN 98
 
-void handle_input(int sockfd, char* buffer, List* list);
+void handle_input(int sockfd, char* buffer, List* work_queue);
 
 void handle_ping(int sockfd);
 
@@ -20,7 +20,7 @@ void handle_erro(int sockfd);
 
 void handle_work(int sockfd, char* buffer);
 
-void handle_abrt(int sockfd);
+void handle_abrt(int sockfd, List* work_queue);
 
 void handle_okay(int sockfd);
 

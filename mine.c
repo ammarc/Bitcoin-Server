@@ -84,8 +84,8 @@ void work(struct work_args args)
 {
 	fprintf(stdout, "----------------Start Work----------------\n");
 	fflush(stdout);
-	if(args.worker_count>1)
-		return;
+	/*if(args.worker_count>1)
+		return;*/
 
 	int i;
 	BYTE curr_value[32];
@@ -102,7 +102,9 @@ void work(struct work_args args)
     uint64_t start = args.start;
     uint8_t worker_count = args.worker_count;
     int sockfd = args.sockfd;
-	uint64_t nonce = start;
+	uint64_t nonce = args.start;
+	fprintf(stdout, "Nonce is %" PRIx64 "\n", nonce);
+	fflush(stdout);
 
 	struct soln_args in_args;
 	in_args.difficulty = difficulty;
@@ -126,6 +128,7 @@ void work(struct work_args args)
 			return;
 		}
 		nonce++;
+		//fprintf(stdout, "Nonce is %" PRIu64 "\n", nonce);
 		in_args.solution = nonce;
 	}
 

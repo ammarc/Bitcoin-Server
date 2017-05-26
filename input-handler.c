@@ -9,13 +9,9 @@
 #include "server.h"
 #include "mine.h"
 
-// Making a global list for all the submitted work
-List* work_queue;
 
-void handle_input(int sockfd, char* buffer, List* list)
+void handle_input(int sockfd, char* buffer, List* work_queue)
 {
-    // Pointing to the same list global list
-    work_queue = list;
     //fprintf(stdout, "Handling input %s\n", buffer);
     //fflush(stdout);
 
@@ -45,7 +41,7 @@ void handle_input(int sockfd, char* buffer, List* list)
     }
     else if (strncmp(buffer, ABRT, 4) == 0)
     {
-        handle_abrt(sockfd);
+        handle_abrt(sockfd, work_queue);
     }
     else
     {
@@ -118,7 +114,7 @@ void handle_soln(int sockfd, char* buffer)
     memset(temp, '\0', 65);
     
     strcpy(temp, strtok(NULL, "\r\n"));
-    in_args.solution = strtol(temp, NULL, 16);
+    in_args.solution = strtoull(temp, NULL, 16);
     if (strlen(temp) != 16)
     {
         send_erro((BYTE*)"Invalid solution", sockfd);
@@ -163,6 +159,7 @@ void handle_work(int sockfd, char* buffer)
         send_erro((BYTE*)"WORK message too short", sockfd);
         return;
     }
+
 
     //TODO: need to check for formatting as well
     //fprintf(stdout, "Starting work with buffer %s\n", buffer);
@@ -227,7 +224,9 @@ void handle_work(int sockfd, char* buffer)
         fflush(stdout);
         return;
     }
-    in_args->start = strtol(temp, NULL, 16);
+    in_args->start = strtoull(temp, NULL, 16);
+    fprintf(stdout, "Start is read as %" PRIx64 "\n", in_args->start);
+    fflush(stdout);
     // Extracting worker count
     memset(temp, '\0', 65);
     
@@ -251,14 +250,11 @@ void handle_work(int sockfd, char* buffer)
     fprintf(stderr, "Worker count is %d\n", in_args.worker_count);
 	fprintf(stderr, "Socket is %d\n", in_args.sockfd);*/
 
-    list_add_end(work_queue, in_args);
-    fprintf(stdout, "Added to list; now with size %d\n", work_queue->size);
-    fflush(stdout);
-
+    add_to_queue(in_args);
     //work(*in_args);
 }
 
-void handle_abrt(int sockfd)
+void handle_abrt(int sockfd, List* work_queue)
 {
     // Loop through the entire list and delete all nodes with sockfd
     Node* node = work_queue->head;
