@@ -83,9 +83,16 @@ bool check_sol(struct soln_args args, BYTE* target)
 void work(struct work_args args)
 {
 	fprintf(stdout, "----------------Start Work----------------\n");
+	fprintf(stdout, "The abort flag is %d\n", abrt_flag);
 	fflush(stdout);
 	/*if(args.worker_count>1)
 		return;*/
+
+    if (abrt_flag)
+	{
+		set_abrt_false();
+		return;
+	}
 
 	int i;
 	BYTE curr_value[32];
@@ -113,7 +120,6 @@ void work(struct work_args args)
 
 	fprintf(stdout, "Found target in work:\n");
 	print_uint256(args.target);
-	fprintf(stdout, "---------END-------\n"); fflush(stdout);
 	
 	for (i = 0; i < 64; i++)
 		in_args.seed[i] = args.seed[i];
@@ -125,6 +131,7 @@ void work(struct work_args args)
 		if (abrt_flag)
 		{
 			set_abrt_false();
+			fprintf(stdout, "YAAAAAAAAAY\n");
 			return;
 		}
 		nonce++;
@@ -152,6 +159,7 @@ void work(struct work_args args)
 	//fflush(stdout);
 
 	send_msg((BYTE*)soln_msg, sockfd);
+	fprintf(stdout, "---------END-------\n"); fflush(stdout);
 }
 
 BYTE* find_target(uint32_t difficulty)

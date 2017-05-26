@@ -181,10 +181,11 @@ int main(int argc, char **argv)
                 {  
                     // Close the socket and mark as 0 in list for reuse
 					// We also need to free all its jobs in the queue
-					handle_abrt(newsockfd, work_queue);
+					handle_abrt(newsockfd, work_queue, false);
 					free(buffers[i]);
                     close(newsockfd);
-                    client_sockets[i] = 0;  
+                    client_sockets[i] = 0;
+					continue;
                 }
 				else
 				{
@@ -245,11 +246,15 @@ void search_for_work()
 	fprintf(stdout, "IN\n"); fflush(stdout);
 	while(true)
 	{
+		//fprintf(stdout, "Threads find size %d\n", work_queue->size);
+		//fflush(stdout);
 		if (work_queue->size > 0)
 		{
 			fprintf(stdout, "Starting work\n"); fflush(stdout);
 			struct work_args * args = (struct work_args*)work_queue->head->data;
 			work(*args);
+			fprintf(stdout, "Length of the queue: %d\n", work_queue->size); 
+			fflush(stdout);
 			list_remove_start(work_queue);
 		}
 	}

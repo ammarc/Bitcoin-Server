@@ -38,7 +38,7 @@ List *new_list()
 	list->head = NULL;
 	list->last = NULL;
 	list->size = 0;
-	pthread_mutex_init(&list->lock, NULL);
+	pthread_mutex_init(&(list->lock), NULL);
 
 	return list;
 }
@@ -80,7 +80,7 @@ void free_node(Node *node)
 // this operation is O(1)
 void list_add_end(List* list, void* data)
 {
-	pthread_mutex_lock(&list->lock);
+	pthread_mutex_lock(&(list->lock));
 
 	assert(list != NULL);
 
@@ -110,22 +110,35 @@ void list_add_end(List* list, void* data)
 	
 	// and keep size updated too
 	list->size++;
-	pthread_mutex_unlock(&list->lock);
+	pthread_mutex_unlock(&(list->lock));
 }
 
 // Adding implementation for removing from list middle
 void list_remove_middle(List* list, Node* node)
 {
-	pthread_mutex_lock(&list->lock);
+	pthread_mutex_lock(&(list->lock));
+
+	fprintf(stdout, "Removing node\n");
+	fflush(stdout);
 
 	assert(list != NULL);
 	assert(list->size > 0);
 
 	if (node == list->head)
+	{
+		pthread_mutex_unlock(&(list->lock));
 		list_remove_start(list);
+		fprintf(stdout, "Removing from the start\n");
+		fflush(stdout);
+		return;
+	}
 
 	if (node == list->last)
+	{
+		pthread_mutex_unlock(&(list->lock));
 		list_remove_end(list);
+		return;
+	}
 
 	Node* start_node = list->head;
 	// searching for the node
@@ -139,7 +152,7 @@ void list_remove_middle(List* list, Node* node)
 
 	list->size--;
 	free(node);
-	pthread_mutex_unlock(&list->lock);
+	pthread_mutex_unlock(&(list->lock));
 }
 
 // remove and return the front data element from a list
@@ -147,7 +160,7 @@ void list_remove_middle(List* list, Node* node)
 // error if the list is empty (so first ensure list_size() > 0)
 void* list_remove_start(List *list)
 {
-	pthread_mutex_lock(&list->lock);
+	pthread_mutex_lock(&(list->lock));
 	assert(list != NULL);
 	assert(list->size > 0);
 	
@@ -177,7 +190,7 @@ void* list_remove_start(List *list)
 	// and we're finished with the node holding this data
 	free_node(start_node);
 
-	pthread_mutex_unlock(&list->lock);
+	pthread_mutex_unlock(&(list->lock));
 	// done!
 	return list_data;
 }

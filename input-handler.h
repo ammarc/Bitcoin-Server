@@ -20,7 +20,7 @@ void handle_erro(int sockfd);
 
 void handle_work(int sockfd, char* buffer);
 
-void handle_abrt(int sockfd, List* work_queue);
+void handle_abrt(int sockfd, List* work_queue, bool flag);
 
 void handle_okay(int sockfd);
 

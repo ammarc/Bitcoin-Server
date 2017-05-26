@@ -41,7 +41,7 @@ void handle_input(int sockfd, char* buffer, List* work_queue)
     }
     else if (strncmp(buffer, ABRT, 4) == 0)
     {
-        handle_abrt(sockfd, work_queue);
+        handle_abrt(sockfd, work_queue, true);
     }
     else
     {
@@ -254,7 +254,7 @@ void handle_work(int sockfd, char* buffer)
     //work(*in_args);
 }
 
-void handle_abrt(int sockfd, List* work_queue)
+void handle_abrt(int sockfd, List* work_queue, bool flag)
 {
     // Loop through the entire list and delete all nodes with sockfd
     Node* node = work_queue->head;
@@ -262,18 +262,28 @@ void handle_abrt(int sockfd, List* work_queue)
     struct work_args* node_args;
     while(node)
     {
+        if(node == work_queue->head) {
+            node = node->next;
+            if (!node)
+                break;
+        }
         node_args = (struct work_args*)(node->data);
         node_sockfd = node_args->sockfd;
+        fprintf(stdout, "New sockfd is %d\n", node_sockfd);
+        fprintf(stdout, "Checking with %d\n", sockfd);
         if(node_sockfd == sockfd)
         {
-            if (node == work_queue->head)
-                set_abrt_true();
-            
             list_remove_middle(work_queue, node);
         }
         node = node->next;
     }
-    send_msg((BYTE*)OKAY, sockfd);
+    if(((struct work_args *)work_queue->head->data)->sockfd == sockfd) {
+        set_abrt_true();
+    }
+    fprintf(stdout, "After aborting queue size is %d\n", work_queue->size);
+    fflush(stdout);
+    if (flag)
+        send_msg((BYTE*)OKAY, sockfd);
 }
 
 void handle_okay(int sockfd)
