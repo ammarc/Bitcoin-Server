@@ -1,5 +1,8 @@
-# COMP30023-Project2
+# Bitcoin Server
 Project 2 for Computer Systems, Semester 1, 2017 at the University of Melbourne.
+The server is essentially used for checking the validity of given proof-of-works and
+can also compute valid proof-of-works. Note that the protocol used by the server
+to connect to its clients is SSTP.
 
 Run the server using:
 ```
