@@ -2,7 +2,6 @@
  *  at the University of Melbourne
  *  Semester 1, 2017
  *  by: Ammar Ahmed
- *  Username: ammara
  */
 
 #ifndef MINE_H

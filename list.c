@@ -1,6 +1,5 @@
 /* * * * * * *
  * Modifications made by: Ammar Ahmed
- * Username: ammara
  * (Procured from a friend doing COMP20007 this semester)
  * 
  * Module for creating and manipulating singly-linked lists of integers
